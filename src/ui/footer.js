@@ -12,7 +12,7 @@ export function renderFooter(el = document.getElementById('rodape'), { home = ''
   </div>
   <div class="foot-main wrap">
     <div class="foot-brand">
-      <span class="brand foot-mark">VS<span>IMPORTS</span></span>
+      <img class="foot-logo" src="${import.meta.env.BASE_URL}brand/vs-logo.svg" alt="VS Imports" width="150" height="150">
       <p>A loja que veste os artistas.</p>
       <form class="news" id="news">
         <label for="news-mail">Receba os lançamentos antes de todo mundo</label>

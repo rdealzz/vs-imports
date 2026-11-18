@@ -80,6 +80,7 @@ function makeMats() {
     x.shadowBlur = 10; x.font = `600 42px ${FONT}`; x.fillText('A LOJA QUE VESTE OS ARTISTAS', w / 2, h * 0.9); x.fillRect(w * 0.04, h * 0.9 - 2, w * 0.13, 4); x.fillRect(w * 0.83, h * 0.9 - 2, w * 0.13, 4);
   });
   M.logo = new THREE.MeshBasicMaterial({ map: logo, transparent: true, toneMapped: false, depthWrite: false });
+
   const frase = canvasTex(1024, 700, (x, w, h) => {
     x.save(); x.translate(w / 2, h / 2); x.rotate(-0.16); x.textAlign = 'center'; x.textBaseline = 'middle';
     x.strokeStyle = '#C9A045'; x.lineWidth = 22; x.lineCap = 'round'; x.beginPath(); x.moveTo(-w * 0.36, h * 0.25); x.quadraticCurveTo(-w * 0.05, h * 0.14, w * 0.33, h * 0.13); x.stroke();
@@ -91,6 +92,22 @@ function makeMats() {
     x.font = `italic 900 110px ${FONT}`; x.fillText('VS', w / 2, h * 0.4); x.font = `500 40px ${FONT}`; x.fillText('Imports', w / 2, h * 0.78);
   });
   M.plaque = S(0xffffff, 0.6, 0, { map: plaque });
+  // troca pelo SVG oficial assim que carregar (vetor -> textura nítida de 2048 px)
+  M.onLogo = null;
+  const svgImg = new Image();
+  svgImg.onload = () => {
+    const paint = (tex, size, bg) => {
+      tex.dispose(); // o tamanho muda: recria a textura na GPU
+      const c = tex.image; c.width = c.height = size;
+      const x = c.getContext('2d'); x.clearRect(0, 0, size, size);
+      if (bg) { x.fillStyle = bg; x.fillRect(0, 0, size, size); }
+      x.drawImage(svgImg, 0, 0, size, size);
+      tex.needsUpdate = true;
+    };
+    paint(logo, 2048); paint(plaque, 512, '#0B0B0B');
+    M.onLogo?.();
+  };
+  svgImg.src = `${import.meta.env.BASE_URL}brand/vs-logo.svg`;
   M.product = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
   return M;
 }
@@ -175,6 +192,7 @@ export class Store3D {
     this.scene.environmentIntensity = 0.3;
     this.camera = new THREE.PerspectiveCamera(isMobile ? 62 : 52, 1, 0.05, 120);
     this.M = makeMats();
+    this.M.onLogo = () => { this.dirty = true; };
     this.build();
     this.orbit = { target: new THREE.Vector3(), r: 5, theta: 0, phi: 1.2 };
     this.anim = null;
@@ -254,7 +272,7 @@ export class Store3D {
     // porta
     box(L.door.w, 2.1, 0.04, M.door, L.door.x, 0, z0 - 0.02, { cast: false });
     box(0.025, 0.025, 0.12, M.gold, L.door.x - L.door.w / 2 + 0.1, 1.0, z0 - 0.06, { cast: false });
-    plane(0.42, 0.21, M.plaque, L.door.x, 1.55, z0 - 0.045, Math.PI, 0, { receive: false });
+    plane(0.34, 0.34, M.plaque, L.door.x, 1.55, z0 - 0.045, Math.PI, 0, { receive: false });
 
     // teto: trilho, spots e perfis lineares (somem quando a câmera passa do teto)
     const tracks = new THREE.Group();
@@ -279,7 +297,7 @@ export class Store3D {
     box(0.03, 0.03, A.len, M.black, ax - 0.22, 0, A.mid); box(0.03, 0.03, A.len, M.black, ax + 0.22, 0, A.mid);
 
     // logo e ripado
-    const lw = Math.min(1.3, A.len * 0.55), lh = lw * 0.74;
+    const lw = Math.min(1.25, A.len * 0.55), lh = lw; // logo quadrada (losango)
     plane(lw, lh, M.logo, xl + 0.03, H - 0.12 - lh / 2, L.logoZ, Math.PI / 2, 0, { receive: false, parent: this.scene }).renderOrder = 3;
     if (L.rip.len > 0.3) {
       const R = L.rip;

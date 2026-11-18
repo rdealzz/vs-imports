@@ -83,6 +83,7 @@ if (!only) {
 if (!only || only === 'loja') {
   const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:0;top:0;width:1600px;height:1000px;visibility:hidden'; document.body.appendChild(host);
   const store = new Store3D(host, { capture: true, view: 'entrada' });
+  await new Promise((r) => { const prev = store.M.onLogo; store.M.onLogo = () => { prev?.(); r(); }; setTimeout(r, 4000); });
   const snap = (name, w, h, view) => {
     host.style.width = w + 'px'; host.style.height = h + 'px'; store.resize(); store.setView(view, 0); store.renderOnce();
     out.push({ name, data: store.renderer.domElement.toDataURL('image/webp', 0.86) });

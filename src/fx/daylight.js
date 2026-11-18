@@ -89,7 +89,7 @@ void main(){
 export const MOODS = {
   manha: { sun: [0.27, 0.6], light: [1, 0.74, 0.52], shade: [0.5, 0.58, 0.95] },
   tarde: { sun: [0.44, 0.9], light: [1, 0.96, 0.88], shade: [0.7, 0.82, 1] },
-  noite: { sun: [0.7, 0.52], light: [1, 0.5, 0.24], shade: [0.62, 0.4, 0.72] },
+  noite: { sun: [0.7, 0.52], light: [1, 0.76, 0.42], shade: [0.6, 0.52, 0.5] }, // ouro da logo
 };
 
 export class Daylight {

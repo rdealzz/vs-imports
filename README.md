@@ -33,3 +33,9 @@ npm run assets     # regenera as imagens provisórias em public/img a partir dos
 ## Para trocar por conteúdo real
 - Fotos: salve em `public/img/` com o mesmo nome (`<id>-card.webp`, `<id>-mood.webp`).
 - Modelos 3D reais (GLB) entram no lugar de `makeProduct` em `src/three/models.js`.
+
+## Marca
+- `public/brand/vs-logo.svg`: logo oficial em vetor (resolução infinita). Gerada por `node scripts/build-logo.mjs`.
+- `vs-icon.svg` (losango + VS, cabeçalho e favicon), `vs-mono-ouro.svg` / `vs-mono-preto.svg` (monograma solto).
+- PNGs transparentes: `vs-logo-4096.png`, `vs-icon-1024.png`, `icon-512.png`, `apple-touch-icon.png` (`node scripts/export-logo-png.cjs`).
+- Paleta: preto `#0B0B0B`, ouro `#AB8546` / `#C8A968` / `#EED39C`, prata `#BBBAB6` / `#F8F4F3` (tokens em `src/styles/base.css`).

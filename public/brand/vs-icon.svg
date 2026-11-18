@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="VS Imports"><title>VS Imports</title><defs>
+  <linearGradient id="ouro" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#EED39C"/><stop offset=".28" stop-color="#C8A968"/>
+    <stop offset=".55" stop-color="#AB8546"/><stop offset=".78" stop-color="#E3C27E"/><stop offset="1" stop-color="#A9823F"/>
+  </linearGradient>
+  <linearGradient id="prata" x1="0" y1="0" x2=".35" y2="1">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset=".35" stop-color="#D9D7D3"/>
+    <stop offset=".6" stop-color="#9E9D9B"/><stop offset=".82" stop-color="#E8E6E2"/><stop offset="1" stop-color="#BBBAB6"/>
+  </linearGradient>
+  <filter id="relevo" x="-10%" y="-10%" width="120%" height="120%">
+    <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".65"/>
+  </filter></defs>
+  <path d="M500 48L952 500L500 952L48 500Z" fill="url(#ouro)"/>
+  <path d="M500 74L926 500L500 926L74 500Z" fill="#0B0B0B"/>
+  <path d="M500 88L912 500L500 912L88 500Z" fill="none" stroke="#2A2824" stroke-width="3"/>
+  <path d="M500 102L898 500L500 898L102 500Z" fill="none" stroke="#000" stroke-opacity=".6" stroke-width="2"/><g transform="translate(0 50)">
+  <g filter="url(#relevo)" fill="url(#prata)"><path transform="translate(558 351.972) scale(.78 1.12) skewX(-6) translate(-558 -351.972)" d="M561.55 479.76Q542.08 479.76 527.48 473.58Q512.87 467.39 502.64 456.83L480.53 478.28L474.76 478.28L474.76 404.52L481.19 404.52Q484.99 418.05 491.34 430.35Q497.69 442.64 507.10 452.29Q516.50 461.94 529.37 467.55Q542.24 473.16 558.91 473.16Q575.41 473.16 587.37 467.39Q599.33 461.61 605.77 450.97Q612.20 440.33 612.20 425.64Q612.20 411.78 605.02 402.38Q597.85 392.97 586.05 386.04Q574.25 379.11 560.14 373.17Q546.04 367.23 531.93 360.47Q517.82 353.70 506.02 344.30Q494.23 334.89 487.05 321.36Q479.87 307.83 479.87 288.20Q479.87 268.40 489.77 254.04Q499.67 239.69 515.92 231.93Q532.18 224.18 551.32 224.18Q566.66 224.18 579.78 229.05Q592.90 233.91 602.80 243.65L624.58 224.18L630.02 224.18L630.02 295.95L623.59 295.95Q618.31 275.16 608.57 260.64Q598.84 246.12 585.14 238.70Q571.45 231.27 553.96 231.27Q532.84 231.27 521.62 241.67Q510.40 252.06 510.40 269.06Q510.40 281.43 517.49 290.10Q524.59 298.76 536.22 305.36Q547.85 311.96 561.88 317.98Q575.90 324 589.85 331.18Q603.79 338.36 615.42 348.18Q627.05 357.99 634.15 372.02Q641.24 386.04 641.24 406.01Q641.24 428.45 631.01 445.03Q620.78 461.61 602.80 470.69Q584.81 479.76 561.55 479.76"/><path transform="translate(466 0) scale(.74 1) translate(-466 0)" d="M522 248L614.20 248L614.20 255.80L579 255.80L472.60 553.80L452 553.80L348.40 255.80L317.80 255.80L317.80 248L450.60 248L450.60 255.80L409.20 255.80L486 493L570.20 255.80L522 255.80" stroke="#0B0B0B" stroke-width="4" paint-order="stroke"/></g></g></svg>
