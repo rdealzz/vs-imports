@@ -4,6 +4,7 @@ import { initBag, bag } from './ui/bag.js';
 import { initAuth } from './ui/auth.js';
 import { cardHTML, priceHTML } from './ui/card.js';
 import { renderFooter } from './ui/footer.js';
+import { mountCalc } from './lib/shipping.js';
 
 const $ = (s) => document.querySelector(s);
 const qs = new URLSearchParams(location.search);
@@ -98,6 +99,7 @@ function related() {
 }
 
 render(); related();
+mountCalc($('#ship'), () => bag.subtotal() + p.finalPrice);
 import('./three/viewer.js').then(({ ProductViewer }) => { viewer = new ProductViewer($('#pdp-3d'), p, ci); })
   .catch(() => { $('#pdp-3d').innerHTML = `<img src="${img(p.id)}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover">`; });
 // dados vivos do banco (preço, promoção, fotos, estoque)

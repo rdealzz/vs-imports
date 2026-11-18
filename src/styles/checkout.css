@@ -117,3 +117,16 @@
 .co-finished .wa-float { display: none; }
 .done-act { width: 100%; max-width: 420px; }
 .done-act .pill.solid { width: 100%; white-space: normal; text-align: center; line-height: 1.25; padding: 12px 20px; }
+/* endereço em etapas no escuro */
+.co-page .af-card { background: rgba(200, 169, 104, .08); }
+.co-page .af-card small { color: var(--ink-d); }
+.co-page .af-links a, .co-page .af-ref summary { color: var(--gold-light); }
+.co-page .chip-r span { border-color: var(--line-d); color: var(--on-night); }
+.co-page .chip-r input:checked + span { background: var(--gold-grad); color: #111; border-color: var(--gold); box-shadow: none; }
+.co-page .lf.big input { font-size: 22px; letter-spacing: .08em; }
+.co-page .af-cep-row .pill { border-radius: 14px; }
+.co-free:not(:empty) { margin: 0 0 14px; }
+.co-page .free-bar span { background: rgba(242, 238, 230, .12); }
+.co-page .free-bar.ok p { color: #9ad48f; } .co-page .free-bar.ok i { background: #6fbf73; }
+.co-tot .free { color: #9ad48f; font-weight: 700; }
+.co-tot dt small { color: var(--ink-d); font-size: 12px; }

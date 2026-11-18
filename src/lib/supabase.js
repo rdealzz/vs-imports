@@ -26,6 +26,7 @@ const MSG = {
   quantidade_invalida: 'Quantidade inválida.',
   'Database error saving new user': 'Não foi possível criar a conta: esse e-mail ou WhatsApp já está cadastrado.',
   'rate limit': 'Muitas tentativas. Aguarde alguns minutos.',
+  cep_invalido: 'CEP inválido: confira os 8 números.',
   'Invalid login credentials': 'E-mail ou senha incorretos.',
   'Email not confirmed': 'Confirme seu e-mail pelo link que enviamos.',
   'User already registered': 'Já existe uma conta com esse e-mail.',

@@ -362,7 +362,7 @@ async function ordersTotals() {
   $('#o-n-loja').textContent = sum((o) => o.channel !== 'site');
 }
 async function loadOrders() {
-  let q = supabase.from('orders').select('id, number, created_at, channel, payment, status, subtotal, discount, total, coupon_code, customer_name, customer_phone, delivery, notes, shipping_address, user_id, order_items(product_id, name, color, size, qty, unit_price)').order('created_at', { ascending: false }).limit(150);
+  let q = supabase.from('orders').select('id, number, created_at, channel, payment, status, subtotal, discount, total, coupon_code, customer_name, customer_phone, delivery, notes, shipping_address, shipping, user_id, order_items(product_id, name, color, size, qty, unit_price)').order('created_at', { ascending: false }).limit(150);
   if ($('#o-status').value) q = q.eq('status', $('#o-status').value);
   if (oSrc === 'site') q = q.eq('channel', 'site');
   else if (oSrc === 'loja') q = $('#o-channel').value ? q.eq('channel', $('#o-channel').value) : q.neq('channel', 'site');
@@ -377,7 +377,7 @@ async function loadOrders() {
     const name = o.customer_name || who?.full_name || who?.email || 'Cliente no balcão';
     const phone = o.customer_phone || who?.phone || '';
     return `<li class="order"><div class="o-top"><b>#${o.number}</b><span class="chip-s">${CH[o.channel]}</span><span class="st st-${o.status}">${o.status}</span><span class="o-date">${new Date(o.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span><b class="o-total">${brl(+o.total)}</b></div>
-      <div class="o-mid"><span>${esc(name)}${phone ? ` · <a href="https://wa.me/55${esc(phone.replace(/\D/g, '').replace(/^55/, ''))}" target="_blank" rel="noopener">${esc(phone)}</a>` : ''}</span><span>${o.payment ? PAY[o.payment] : 'pagamento a combinar'} · ${o.delivery === 'entrega' ? 'entrega' : 'retirada'}${+o.discount ? ` · desconto ${brl(+o.discount)}${o.coupon_code ? ' (' + o.coupon_code + ')' : ''}` : ''}</span></div>
+      <div class="o-mid"><span>${esc(name)}${phone ? ` · <a href="https://wa.me/55${esc(phone.replace(/\D/g, '').replace(/^55/, ''))}" target="_blank" rel="noopener">${esc(phone)}</a>` : ''}</span><span>${o.payment ? PAY[o.payment] : 'pagamento a combinar'} · ${o.delivery === 'entrega' ? `entrega${+o.shipping ? ' (frete ' + brl(+o.shipping) + ')' : ' (frete grátis)'}` : 'retirada'}${+o.discount ? ` · desconto ${brl(+o.discount)}${o.coupon_code ? ' (' + o.coupon_code + ')' : ''}` : ''}</span></div>
       <ul class="o-items">${o.order_items.map((i) => `<li>${thumb(i.product_id)}<span><b>${i.qty}x</b> ${esc(i.name)}<small>${esc([i.color, i.size].filter(Boolean).join(' · '))}</small></span></li>`).join('')}</ul>
       ${shipHTML(o)}${o.notes ? `<p class="o-notes">${esc(o.notes)}</p>` : ''}
       ${o.status === 'cancelado' ? '' : `<div class="o-act"><select data-st="${o.id}">${['pendente', 'pago', 'separado', 'entregue'].map((s) => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}</select><button class="pill sm danger" data-cancel="${o.id}" data-n="${o.number}">Cancelar e devolver estoque</button></div>`}</li>`;
@@ -620,9 +620,9 @@ function reportHTML({ from, to, s, rows, top, closing }) {
     </div>
     ${closing ? `<p class="closed">Mês fechado em ${new Date(closing.closed_at).toLocaleString('pt-BR')}</p>` : ''}
     <h2>Mais vendidos</h2>
-    <table class="tbl small"><thead><tr><th>Peça</th><th>Qtd.</th><th>Vendido</th><th>Lucro</th></tr></thead><tbody>${top.map((t) => `<tr><td class="cell-th">${thumb(t.product_id)}${esc(t.name)}</td><td>${t.qty}</td><td>${brl(+t.revenue)}</td><td>${brl(+t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sem vendas.</td></tr>'}</tbody></table>
+    <div class="table-wrap"><table class="tbl small"><thead><tr><th>Peça</th><th>Qtd.</th><th>Vendido</th><th>Lucro</th></tr></thead><tbody>${top.map((t) => `<tr><td class="cell-th">${thumb(t.product_id)}${esc(t.name)}</td><td>${t.qty}</td><td>${brl(+t.revenue)}</td><td>${brl(+t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sem vendas.</td></tr>'}</tbody></table></div>
     <h2>Todas as vendas (${rows.length})</h2>
-    <table class="tbl small"><thead><tr><th>#</th><th>Data</th><th>Canal</th><th>Cliente</th><th>Itens</th><th>Pagto.</th><th>Desc.</th><th>Total</th><th>Lucro</th></tr></thead><tbody>
+    <div class="table-wrap"><table class="tbl small"><thead><tr><th>#</th><th>Data</th><th>Canal</th><th>Cliente</th><th>Itens</th><th>Pagto.</th><th>Desc.</th><th>Total</th><th>Lucro</th></tr></thead><tbody</table></div>v class="table-wrap"><table class="tbl small"><thead><tr><th>#</th><th>Data</th><th>Canal</th><th>Cliente</th><th>Itens</th><th>Pagto.</th><th>Desc.</th><th>Total</th><th>Lucro</th></tr></thead><tbody>
     ${rows.map((r) => `<tr class="${r.status === 'cancelado' ? 'canc' : ''}"><td>${r.number}</td><td>${new Date(r.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td><td>${CH[r.channel]}</td><td>${esc(r.customer)}</td><td>${esc(r.items || '')}${r.status === 'cancelado' ? ' <b>(cancelado)</b>' : ''}</td><td>${r.payment ? PAY[r.payment] : '—'}</td><td>${+r.discount ? brl(+r.discount) : ''}</td><td>${brl(+r.total)}</td><td>${brl(+r.profit)}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">Nenhuma venda no período.</td></tr>'}
     </tbody></table>`;
 }
@@ -638,7 +638,23 @@ $('#rep-close').addEventListener('click', async () => {
 });
 
 /* ============================================================ ajustes */
+async function loadShipping() {
+  const [{ data: cfg }, { data: zones }] = await Promise.all([supabase.from('store_settings').select('free_shipping_min').maybeSingle(), supabase.from('shipping_zones').select('*').order('sort')]);
+  const f = $('#ship-form'); f.free.value = cfg?.free_shipping_min ?? 349.9;
+  $('#ship-zones').innerHTML = (zones || []).map((z) => `<tr><td><b>${esc(z.name)}</b><small>CEP ${String(z.cep_from).padStart(8, '0').slice(0, 5)} a ${String(z.cep_to).padStart(8, '0').slice(0, 5)}</small></td>
+    <td><input type="number" inputmode="decimal" min="0" step="0.5" value="${+z.price}" data-zp="${z.id}" aria-label="Preço ${esc(z.name)}"></td>
+    <td><input maxlength="40" value="${esc(z.days)}" data-zd="${z.id}" aria-label="Prazo ${esc(z.name)}"></td></tr>`).join('');
+}
+$('#ship-form').addEventListener('submit', async (e) => {
+  e.preventDefault(); const f = e.target;
+  const free = Math.max(0, +f.free.value || 0);
+  const ups = $$('[data-zp]').map((i) => supabase.from('shipping_zones').update({ price: Math.max(0, +i.value || 0), days: $(`[data-zd="${i.dataset.zp}"]`).value.trim() }).eq('id', +i.dataset.zp));
+  const res = await Promise.all([supabase.from('store_settings').update({ free_shipping_min: free, updated_at: new Date().toISOString() }).eq('id', true), ...ups]);
+  const err = res.find((r) => r.error)?.error;
+  toast(err ? friendly(err) : 'Frete salvo', !!err); loadShipping();
+});
 async function loadSettings() {
+  loadShipping();
   const { data } = await supabase.from('store_settings').select('month_start_day, monthly_goal').maybeSingle();
   $('#set-form').day.value = data?.month_start_day || 1; $('#set-form').goal.value = data?.monthly_goal ?? ''; previewPeriod();
   loadTeam();

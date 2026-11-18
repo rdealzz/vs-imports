@@ -8,6 +8,7 @@ import { initAuth, auth, openAuth } from './ui/auth.js';
 import { bag } from './ui/bag.js';
 import { listAddresses, formHTML, bindForm, addressLine } from './ui/addresses.js';
 import { renderFooter } from './ui/footer.js';
+import { quote, freeBarHTML } from './lib/shipping.js';
 import { orderPdf, pdfName, downloadBlob, uploadPdf, waOrderLink } from './lib/orderPdf.js';
 
 // quando o Mercado Pago estiver integrado, troque para true
@@ -15,7 +16,7 @@ const MP_ONLINE = false;
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-let catalog = [], eligible = false, addresses = [], addrId = null;
+let catalog = [], eligible = false, addresses = [], addrId = null, ship = null, shipKey = '';
 const find = (id) => catalog.find((p) => p.id === id);
 const delivery = () => document.querySelector('[name=delivery]:checked').value;
 const pay = () => document.querySelector('[name=pay]:checked').value;
@@ -80,10 +81,17 @@ function renderSummary() {
   }).join('') : `<li class="empty">Sua sacola está vazia. <a href="./#catalogo">Ver o catálogo</a></li>`;
   const sub = list.reduce((s, i) => s + find(i.id).finalPrice * i.qty, 0);
   const disc = eligible ? Math.round(sub * 5) / 100 : 0;
+  // frete oficial vem do banco pelo CEP do endereço escolhido
+  const a = delivery() === 'entrega' ? addresses.find((x) => x.id === addrId) : null;
+  const key = a ? `${a.cep}|${sub}` : '';
+  if (a && shipKey !== key) { shipKey = key; ship = null; quote(a.cep, sub).then((q) => { if (shipKey === key) { ship = q || { price: 0, days: 'prazo a combinar', free: false }; renderSummary(); } }).catch(() => { ship = { price: 0, days: 'a combinar', free: false, err: true }; renderSummary(); }); }
+  const shipVal = a && ship ? +ship.price : 0;
+  const shipTxt = delivery() !== 'entrega' ? 'grátis' : !a ? 'informe o endereço' : !ship ? 'calculando…' : ship.err ? 'a combinar' : ship.free || !shipVal ? '<b class="free">grátis</b>' : brl(shipVal);
+  freeBarHTML(list.length ? sub : 0).then((h) => { $('#free').innerHTML = delivery() === 'entrega' ? h : ''; });
   $('#tot').innerHTML = `<div><dt>Subtotal</dt><dd>${brl(sub)}</dd></div>
     ${eligible ? `<div class="gold"><dt>Primeira compra (−5%)</dt><dd>−${brl(disc)}</dd></div>` : !auth.user && list.length ? '<div class="hint"><dt>Crie sua conta e ganhe 5% na 1ª compra</dt><dd></dd></div>' : ''}
-    <div><dt>${delivery() === 'entrega' ? 'Frete' : 'Retirada na loja'}</dt><dd>${delivery() === 'entrega' ? 'a combinar' : 'grátis'}</dd></div>
-    <div class="t"><dt>Total</dt><dd>${brl(sub - disc)}</dd></div>`;
+    <div><dt>${delivery() === 'entrega' ? `Frete${a && ship?.days ? ` <small>· ${esc(ship.days)}</small>` : ''}` : 'Retirada na loja'}</dt><dd>${shipTxt}</dd></div>
+    <div class="t"><dt>Total</dt><dd>${brl(sub - disc + shipVal)}</dd></div>`;
   return list;
 }
 
@@ -125,7 +133,7 @@ async function submit() {
   done.innerHTML = `<img src="${import.meta.env.BASE_URL}brand/vs-logo.svg" alt="" width="120" height="120">
     <p class="eyebrow">Pedido confirmado</p><h1>Pedido #${o.number}</h1>
     <p>Total <b>${brl(+o.total)}</b>${+o.discount ? `, você economizou ${brl(+o.discount)}` : ''}. Suas peças estão reservadas por 48 horas.</p>
-    <p>${del === 'entrega' ? 'Envie a mensagem abaixo para combinarmos o frete e o pagamento.' : 'Envie a mensagem abaixo e combine o horário da retirada.'}</p>
+    <p>${del === 'entrega' ? `${+o.shipping ? `Frete ${brl(+o.shipping)} já incluído no total.` : 'Frete grátis!'} Envie o pedido abaixo para combinarmos o pagamento.` : 'Envie a mensagem abaixo e combine o horário da retirada.'}</p>
     <div class="done-act">
       <a class="pill solid lg" id="pdf-wa" href="https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener" aria-disabled="true"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg><span>Preparando o PDF…</span></a>
       <button class="link" type="button" id="pdf-dl">Baixar o PDF do pedido</button>

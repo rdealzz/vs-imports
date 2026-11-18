@@ -311,3 +311,18 @@ img.th { width: 44px; height: 44px; flex: none; object-fit: cover; border-radius
 .pill.wa:hover { background: #1F6F4A; color: #fff; }
 .pdf-act { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .o-act { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+@media (max-width: 700px) {
+  .o-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .o-tabs button { padding: 10px; border-radius: 12px; }
+  .o-tabs span { font-size: 10px; letter-spacing: .04em; } .o-tabs b { font-size: 14px; } .o-tabs small { display: none; }
+  .grid-buy .fld { min-width: 0; flex: 1 1 100%; }
+  .buy-pick img { width: 84px; height: 84px; } .buy-pick b { font-size: 19px; }
+}
+.ship-tbl input { width: 100%; min-width: 80px; font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); }
+#ship-form .table-wrap { margin: 12px 0; }
+@media (max-width: 700px) {
+  .two { grid-template-columns: minmax(0, 1fr); }
+  .ship-tbl input { min-width: 0; }
+  .ship-tbl th, .ship-tbl td { padding-left: 6px; padding-right: 6px; }
+  .ship-tbl td:nth-child(2) { width: 84px; }
+}

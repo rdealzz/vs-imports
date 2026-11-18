@@ -4,6 +4,7 @@ import { brl, img } from '../data/products.js';
 import { loadCatalog, variantStock } from '../data/catalog.js';
 import { supabase, hasSupabase } from '../lib/supabase.js';
 import { auth } from './auth.js';
+import { freeBarHTML } from '../lib/shipping.js';
 
 const KEY = 'vs-bag-v2';
 let items = [];
@@ -64,6 +65,7 @@ function render() {
   el.querySelector('#bag-sub').innerHTML = !items.length ? '' :
     eligible ? `<span>Subtotal ${brl(sub)}</span><span class="gold">Primeira compra −5% (${brl(disc)})</span>`
     : auth.user ? `<span>Subtotal ${brl(sub)}</span>` : `<span>Subtotal ${brl(sub)}</span><button class="link" type="button" data-login>Entre ou crie sua conta e ganhe 5% na 1ª compra</button>`;
+  freeBarHTML(items.length ? sub : 0).then((h) => { const f = el.querySelector('#bag-free'); if (f) f.innerHTML = h; });
   const go = el.querySelector('#bag-go');
   go.disabled = !items.length;
   go.textContent = 'Finalizar compra';
@@ -81,9 +83,10 @@ export function initBag({ onOpen, onClose } = {}) {
   el = document.getElementById('bag');
   const foot = el.querySelector('.bag-panel > footer');
   foot.innerHTML = `
+    <div id="bag-free"></div>
     <div class="bag-sub" id="bag-sub"></div>
     <div class="bag-total"><span>Total</span><b id="bag-total">R$ 0,00</b></div>
-    <p class="bag-ship">Entregamos para todo o Brasil ou retire na loja no mesmo dia.</p>
+    <p class="bag-ship">Entregamos para todo o Brasil (frete calculado pelo CEP na finalização) ou retire na loja no mesmo dia.</p>
     <button class="pill solid block" id="bag-go" type="button">Finalizar pedido</button>
     <p class="small" id="bag-msg" role="status" aria-live="polite"></p>`;
   let lastFocus;

@@ -86,7 +86,7 @@ export async function orderPdf(o, items) {
   const pcs = items.reduce((t, i) => t + i.qty, 0);
   row(`${pcs} peça${pcs > 1 ? 's' : ''} · subtotal`, brl(+o.subtotal));
   if (+o.discount) row(`Desconto${o.coupon_code ? ' (' + o.coupon_code + ')' : ''}`, '-' + brl(+o.discount));
-  if (o.delivery === 'entrega') row('Frete', 'a combinar');
+  if (o.delivery === 'entrega') row('Frete', +o.shipping ? brl(+o.shipping) : 'grátis');
   doc.setDrawColor(...gold); doc.line(130, y - 3, W - M, y - 3); y += 3;
   row('Total', brl(+o.total), true);
 
