@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VS Imports | a loja que veste os artistas</title>
+<meta name="description" content="Camisetas, bonés, tênis e bermudas. Loja física no Capão Raso, Curitiba, e loja 3D online para passear pelas araras.">
+<meta name="theme-color" content="#0B0B0D">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/styles/base.css">
+<link rel="stylesheet" href="/src/styles/home.css">
+</head>
+<body class="home">
+
+<a class="skip" href="#loja">Pular para a loja 3D</a>
+
+<header class="site-head" id="top">
+  <a class="brand" href="./" aria-label="VS Imports, início">VS<span>IMPORTS</span></a>
+  <nav class="site-nav" aria-label="Principal">
+    <a href="#loja">Loja 3D</a>
+    <a href="#colecoes">Coleções</a>
+    <a href="#catalogo">Catálogo</a>
+    <a href="#visite">Loja física</a>
+  </nav>
+  <button class="bag-btn" type="button" data-bag-open aria-label="Abrir sacola">Sacola <b data-bag-count>0</b></button>
+</header>
+
+<main>
+  <!-- 1. Abertura: luz atravessando o título -->
+  <section class="light-hero" id="abertura" aria-labelledby="titulo">
+    <canvas class="light-canvas" aria-hidden="true"></canvas>
+    <div class="light-copy">
+      <h1 id="titulo" class="light-title">VS Imports</h1>
+      <div class="light-under reveal-late">
+        <p>A loja que veste os artistas. Camisetas, bonés e tênis com luz de vitrine, no Capão Raso e aqui.</p>
+        <div class="row">
+          <a class="pill solid" href="#loja">Entrar na loja 3D</a>
+          <a class="pill" href="#catalogo">Ver catálogo</a>
+        </div>
+      </div>
+    </div>
+    <div class="mood reveal-late" role="radiogroup" aria-label="Luz da loja">
+      <button role="radio" aria-checked="false" data-mood="manha">Manhã</button>
+      <button role="radio" aria-checked="false" data-mood="tarde">Tarde</button>
+      <button role="radio" aria-checked="true" data-mood="noite">Noite</button>
+    </div>
+    <p class="scroll-cue reveal-late" aria-hidden="true">role</p>
+  </section>
+
+  <!-- 2. Anel de peças (base do vídeo) que abre para a loja -->
+  <section class="ring-hero" id="pecas" aria-labelledby="pecas-t">
+    <div class="ring-pin">
+      <div class="ring-text">
+        <h2 id="pecas-t" class="display"><span>Peças</span><span>para todo</span><span>dia.</span></h2>
+        <p class="small">Selecionadas para quem vive de estilo.<br>Feitas para durar na rua.</p>
+      </div>
+      <div class="ring-side">
+        <a href="#colecoes" data-filter="camisetas">Camisetas</a>
+        <a href="#colecoes" data-filter="bones">Bonés</a>
+        <a href="#colecoes" data-filter="tenis">Tênis</a>
+        <a href="#colecoes" data-filter="bermudas">Bermudas</a>
+      </div>
+      <div class="ring" aria-hidden="true">
+        <div class="ring-hanger"></div>
+        <img class="ring-center" src="/img/anel-centro.webp" alt="" width="800" height="1000">
+        <div class="ring-orbit"></div>
+      </div>
+      <div class="ring-expand" aria-hidden="true">
+        <picture>
+          <source media="(max-aspect-ratio: 1/1)" srcset="/img/loja-entrada-m.webp">
+          <img src="/img/loja-entrada.webp" alt="" width="1600" height="1000">
+        </picture>
+        <div class="expand-copy">
+          <p class="display">Montada<br>para ser<br>vista.</p>
+          <p class="small">Preto fosco, luz quente 3000K e camiseta em primeiro plano. Agora dá para entrar daqui.</p>
+        </div>
+      </div>
+      <p class="ring-foot small">Loja física no Capão Raso, Curitiba</p>
+    </div>
+  </section>
+
+  <!-- 3. Loja 3D -->
+  <section class="store" id="loja" aria-labelledby="loja-t">
+    <div class="store-head wrap">
+      <h2 id="loja-t" class="display">Passeie pela loja.</h2>
+      <p>Arraste para olhar em volta, toque no piso para andar e toque numa peça para ver. A disposição é a mesma da loja física.</p>
+    </div>
+    <div class="stage" id="stage">
+      <div class="viewer" id="viewer" aria-label="Loja 3D interativa da VS Imports"></div>
+      <div class="views" role="group" aria-label="Ir para">
+        <button class="chip" data-view="entrada" aria-pressed="true">Entrada</button>
+        <button class="chip" data-view="camisetas" aria-pressed="false">Camisetas</button>
+        <button class="chip" data-view="logo" aria-pressed="false">Parede do logo</button>
+        <button class="chip" data-view="estante" aria-pressed="false">Bonés e tênis</button>
+        <button class="chip" data-view="caixa" aria-pressed="false">Caixa</button>
+        <button class="chip" data-view="geral" aria-pressed="false">De cima</button>
+      </div>
+      <div class="tag" id="tag" hidden>
+        <img alt="" width="80" height="100">
+        <div><b></b><span></span></div>
+        <a class="pill solid sm" href="#">Ver peça</a>
+      </div>
+      <div class="stage-tools">
+        <button class="round" id="zin" aria-label="Aproximar">+</button>
+        <button class="round" id="zout" aria-label="Afastar">−</button>
+        <button class="round wide" id="fs" aria-pressed="false">Tela cheia</button>
+      </div>
+      <p class="stage-hint" id="hint">Arraste para girar · role com o mouse depois de clicar para aproximar</p>
+      <div class="fade" id="fade"></div>
+    </div>
+    <ul class="store-list wrap" id="store-list" aria-label="Peças na loja"></ul>
+  </section>
+
+  <!-- 4. Coleções -->
+  <section class="collections wrap" id="colecoes" aria-labelledby="col-t">
+    <div class="sec-head">
+      <h2 id="col-t" class="display">Quatro linhas.<br>Um estilo só.</h2>
+      <p>Cada peça foi escolhida para combinar com as outras. Monte o conjunto inteiro sem pensar muito.</p>
+    </div>
+    <div class="col-grid" id="col-grid"></div>
+  </section>
+
+  <!-- 5. Destaques: produto girando, troca no scroll -->
+  <section class="feature" id="destaques" aria-labelledby="dest-t">
+    <h2 id="dest-t" class="visually-hidden">Destaques</h2>
+    <div class="feature-pin">
+      <div class="feature-photo" id="feature-photo"></div>
+      <div class="feature-3d">
+        <div class="feature-canvas" id="feature-canvas" aria-hidden="true"></div>
+        <p class="feature-label small">Role para ver a próxima</p>
+        <div class="feature-info" id="feature-info"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Grãos de luz: Estilo e qualidade é com a VS -->
+  <section class="dust" id="estilo" aria-labelledby="estilo-t">
+    <div class="dust-stage">
+      <canvas class="dust-canvas" aria-hidden="true"></canvas>
+      <nav class="rail" aria-label="Capítulos">
+        <a href="#estilo" aria-current="true"><i></i><span>Estilo</span></a>
+        <a href="#estilo-1"><i></i><span>Camiseta</span></a>
+        <a href="#estilo-2"><i></i><span>Boné</span></a>
+        <a href="#estilo-3"><i></i><span>VS</span></a>
+      </nav>
+    </div>
+    <div class="dust-open">
+      <h2 id="estilo-t" class="visually-hidden">Estilo e qualidade</h2>
+      <p class="dust-sub">A frase da parede da loja, feita de 110 mil grãos de luz.<br><span class="small">role devagar</span></p>
+    </div>
+    <article class="dust-ch" id="estilo-1"><div><h3>Primeiro, o caimento.</h3><p>Malha pesada, gola que não abre e um corte reto que fica bem lavagem depois de lavagem.</p></div></article>
+    <article class="dust-ch" id="estilo-2"><div><h3>Depois, o detalhe.</h3><p>Bordado em alto relevo, fecho de metal e aba no ângulo certo. É o que faz a peça parecer cara.</p></div></article>
+    <article class="dust-ch" id="estilo-3"><div><h3>E é com a VS.</h3><p>Tudo isso escolhido a dedo e exposto como merece, na loja e aqui.</p><a class="pill solid" href="#catalogo">Ver o catálogo</a></div></article>
+  </section>
+
+  <!-- 7. Editorial -->
+  <section class="editorial" id="editorial" aria-labelledby="ed-t">
+    <div class="ed-pin">
+      <h2 id="ed-t" class="visually-hidden">Estilo não precisa ser discreto</h2>
+      <p class="ed-l ed-1" aria-hidden="true">Estilo não</p>
+      <p class="ed-l ed-2" aria-hidden="true">precisa ser discreto.</p>
+      <p class="ed-l ed-3" aria-hidden="true">A gente gosta de peça</p>
+      <p class="ed-l ed-4" aria-hidden="true">que chama atenção.</p>
+      <p class="ed-note ed-n1">peças que aparecem<br>de longe</p>
+      <p class="ed-note ed-n2">e que ficam melhores<br>quanto mais você usa</p>
+      <figure class="ed-img"><img src="/img/camiseta-estilo-mood.webp" alt="Camiseta Estilo e Qualidade sobre um pedestal com luz quente" width="900" height="1200" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <!-- 8. Catálogo -->
+  <section class="catalog wrap" id="catalogo" aria-labelledby="cat-t">
+    <div class="sec-head">
+      <h2 id="cat-t" class="display">Catálogo</h2>
+      <div class="filters" role="group" aria-label="Filtrar por linha" id="filters"></div>
+    </div>
+    <ul class="grid" id="grid"></ul>
+  </section>
+
+  <!-- 9. Loja física -->
+  <section class="visit wrap" id="visite" aria-labelledby="vis-t">
+    <div>
+      <h2 id="vis-t" class="display">Venha<br>experimentar.</h2>
+    </div>
+    <dl class="visit-info" id="visit-info"></dl>
+  </section>
+</main>
+
+<footer class="site-foot wrap">
+  <span class="brand">VS<span>IMPORTS</span></span>
+  <span>A loja que veste os artistas. Imagens ilustrativas, preços sujeitos a alteração.</span>
+</footer>
+
+<aside class="bag" id="bag" aria-label="Sacola" hidden>
+  <div class="bag-panel">
+    <header><h2>Sacola</h2><button class="round" data-bag-close aria-label="Fechar sacola">×</button></header>
+    <ul class="bag-list" id="bag-list"></ul>
+    <footer>
+      <div class="bag-total"><span>Total</span><b id="bag-total">R$ 0,00</b></div>
+      <a class="pill solid block" id="bag-whats" href="#" target="_blank" rel="noopener">Finalizar pelo WhatsApp</a>
+      <p class="small">Retire na loja do Capão Raso ou combine a entrega.</p>
+    </footer>
+  </div>
+</aside>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

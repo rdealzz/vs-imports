@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Produto | VS Imports</title>
+<meta name="theme-color" content="#0B0B0D">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/styles/base.css">
+<link rel="stylesheet" href="/src/styles/produto.css">
+</head>
+<body class="pdp">
+<header class="site-head solid">
+  <a class="brand" href="./" aria-label="VS Imports, início">VS<span>IMPORTS</span></a>
+  <nav class="site-nav" aria-label="Principal">
+    <a href="./#loja">Loja 3D</a>
+    <a href="./#catalogo">Catálogo</a>
+    <a href="./#visite">Loja física</a>
+  </nav>
+  <button class="bag-btn" type="button" data-bag-open aria-label="Abrir sacola">Sacola <b data-bag-count>0</b></button>
+</header>
+
+<main class="pdp-main" id="pdp">
+  <div class="pdp-media">
+    <div class="pdp-3d" id="pdp-3d" aria-label="Modelo 3D da peça. Arraste para girar."></div>
+    <div class="pdp-media-ui">
+      <a class="pill sm back" id="back" href="./#loja">← Voltar para a loja 3D</a>
+      <span class="small hint3d">Arraste para girar · toque duas vezes para aproximar</span>
+    </div>
+    <div class="pdp-thumbs" id="thumbs"></div>
+  </div>
+  <div class="pdp-info">
+    <p class="crumb small" id="crumb"></p>
+    <h1 id="name"></h1>
+    <p class="price"><b id="price"></b><span class="small" id="inst"></span></p>
+    <p class="desc" id="desc"></p>
+    <fieldset class="opt">
+      <legend>Cor: <b id="color-name"></b></legend>
+      <div class="swatches" id="colors"></div>
+    </fieldset>
+    <fieldset class="opt">
+      <legend>Tamanho</legend>
+      <div class="sizes" id="sizes"></div>
+    </fieldset>
+    <div class="buy">
+      <button class="pill solid block" id="add" type="button">Adicionar à sacola</button>
+      <a class="pill block" id="whats" target="_blank" rel="noopener">Comprar pelo WhatsApp</a>
+    </div>
+    <p class="msg small" id="msg" role="status" aria-live="polite"></p>
+    <dl class="perks">
+      <div><dt>Na loja física</dt><dd>Disponível para provar no Capão Raso.</dd></div>
+      <div><dt>Retirada</dt><dd>Compre aqui e retire no mesmo dia.</dd></div>
+      <div><dt>Troca</dt><dd>Até 30 dias, na loja ou pelo WhatsApp.</dd></div>
+    </dl>
+  </div>
+</main>
+
+<section class="wrap related" aria-labelledby="rel-t">
+  <h2 id="rel-t">Combina com</h2>
+  <ul class="grid" id="related"></ul>
+</section>
+
+<footer class="site-foot wrap">
+  <span class="brand">VS<span>IMPORTS</span></span>
+  <span>A loja que veste os artistas.</span>
+</footer>
+
+<aside class="bag" id="bag" aria-label="Sacola" hidden>
+  <div class="bag-panel">
+    <header><h2>Sacola</h2><button class="round" data-bag-close aria-label="Fechar sacola">×</button></header>
+    <ul class="bag-list" id="bag-list"></ul>
+    <footer>
+      <div class="bag-total"><span>Total</span><b id="bag-total">R$ 0,00</b></div>
+      <a class="pill solid block" id="bag-whats" href="#" target="_blank" rel="noopener">Finalizar pelo WhatsApp</a>
+      <p class="small">Retire na loja do Capão Raso ou combine a entrega.</p>
+    </footer>
+  </div>
+</aside>
+<script type="module" src="/src/produto.js"></script>
+</body>
+</html>
