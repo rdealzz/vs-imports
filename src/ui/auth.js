@@ -172,7 +172,12 @@ function renderAccount() {
         </div>`;
       const btn = wrap.querySelector('.acct-btn'), menu = wrap.querySelector('.acct-menu');
       btn.addEventListener('click', () => { menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); });
-      document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); } });
+      const shut = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+      document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) shut(); });
+      // rolou a página: o menu fecha sozinho
+      addEventListener('scroll', () => { if (!menu.hidden) shut(); }, { passive: true });
+      addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) shut(); });
+      menu.addEventListener('click', (e) => { if (e.target.closest('button, a')) shut(); });
     }
     bag.before(wrap);
   });
