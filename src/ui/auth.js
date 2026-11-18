@@ -6,8 +6,9 @@ let user = null, profile = null;
 const subs = new Set();
 export const auth = {
   get user() { return user; }, get profile() { return profile; },
-  get isStaff() { return ['vendedor', 'dono'].includes(profile?.role); },
-  get isOwner() { return profile?.role === 'dono'; },
+  get isStaff() { return ['vendedor', 'dono', 'dev'].includes(profile?.role); },
+  get isOwner() { return ['dono', 'dev'].includes(profile?.role); },
+  get isDev() { return profile?.role === 'dev'; },
   on(fn) { subs.add(fn); fn(user, profile); },
 };
 const emit = () => subs.forEach((f) => f(user, profile));

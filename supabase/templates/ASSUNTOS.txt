@@ -1,0 +1,5 @@
+confirmar-cadastro.html  ->  Assunto: Confirme seu e-mail e ganhe 5% na primeira compra
+recuperar-senha.html  ->  Assunto: Crie uma nova senha na VS Imports
+alterar-email.html  ->  Assunto: Confirme seu novo e-mail na VS Imports
+link-de-acesso.html  ->  Assunto: Seu link para entrar na VS Imports
+convite.html  ->  Assunto: Você foi convidado para a VS Imports

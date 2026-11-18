@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only">
+<title>Bem-vindo à VS Imports</title></head>
+<body style="margin:0;padding:0;background:#F4F1EB;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Falta um clique para ativar sua conta na VS Imports.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F1EB;">
+<tr><td align="center" style="padding:28px 12px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#FFFFFF;border-radius:14px;overflow:hidden;">
+    <tr><td style="background:#120F0B;line-height:0;">
+      <img src="https://lmwosmsnpsguqymbuanv.supabase.co/storage/v1/object/public/produtos/email/banner.jpg" width="600" alt="VS Imports" style="display:block;width:100%;max-width:600px;height:auto;border:0;">
+    </td></tr>
+    <tr><td style="height:3px;background:#AB8546;line-height:3px;font-size:0;">&nbsp;</td></tr>
+    <tr><td style="padding:40px 44px 8px;font-family:Georgia,'Times New Roman',serif;color:#16130F;">
+      <h1 style="margin:0 0 16px;font-weight:normal;font-size:30px;line-height:1.15;">Bem-vindo à VS Imports</h1>
+      <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#5E5A54;">Olá{{ if .Data.full_name }}, {{ .Data.full_name }}{{ end }}! Sua conta está quase pronta. Confirme seu e-mail para ativar o cadastro e garantir <b style="color:#16130F;">5% de desconto na primeira compra</b>, no site ou na loja física.</p>
+    </td></tr>
+    <tr><td align="left" style="padding:28px 44px 8px;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="background:#16130F;border-radius:4px;">
+          <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:16px 30px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#F6E7C4;text-decoration:none;letter-spacing:.3px;">Confirmar meu e-mail</a>
+        </td></tr></table>
+    </td></tr>
+    <tr><td style="padding:18px 44px 8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#5E5A54;">Com a conta ativa você acompanha seus pedidos, recebe os lançamentos antes de todo mundo e pode comprar pelo site e retirar no mesmo dia na loja.</td></tr>
+    <tr><td style="padding:8px 44px 32px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#8D877E;">
+      Se o botão não abrir, copie este endereço no navegador:<br>
+      <a href="{{ .ConfirmationURL }}" style="color:#AB8546;word-break:break-all;">{{ .ConfirmationURL }}</a>
+    </td></tr>
+    <tr><td style="padding:0 44px;"><div style="border-top:1px solid #E4DED3;"></div></td></tr>
+    <tr><td style="padding:22px 44px 34px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.7;color:#8D877E;">
+      Você recebeu este e-mail porque criou uma conta na VS Imports com {{ .Email }}. Se não foi você, é só ignorar: nenhuma conta será ativada.<br><br>
+      <span style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:15px;color:#16130F;">VS Imports</span> · A loja que veste os artistas<br>
+      Capão Raso, Curitiba · <a href="{{ .SiteURL }}" style="color:#AB8546;text-decoration:none;">visite o site</a>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>

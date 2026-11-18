@@ -14,6 +14,7 @@ const iso = (d) => { const z = new Date(d); z.setMinutes(z.getMinutes() - z.getT
 const br = (d) => new Date(d + (String(d).length === 10 ? 'T12:00' : '')).toLocaleDateString('pt-BR');
 const hex = (c) => '#' + Number(c).toString(16).padStart(6, '0');
 const CH = { site: 'Site', loja: 'Loja', instagram: 'Instagram', whatsapp: 'WhatsApp' };
+const ROLE = { cliente: 'Cliente', vendedor: 'Vendedor', dono: 'Dono (administrador)', dev: 'Desenvolvedor' };
 const PAY = { pix: 'Pix', credito: 'Crédito', debito: 'Débito', dinheiro: 'Dinheiro' };
 const PRESETS = { camisetas: ['P', 'M', 'G', 'GG', 'XG'], bermudas: ['38', '40', '42', '44', '46'], tenis: ['37', '38', '39', '40', '41', '42', '43', '44'], bones: ['Único'], acessorios: ['Único'] };
 
@@ -49,7 +50,7 @@ auth.on(async (user, profile) => {
   }
   gate.hidden = true; app.hidden = false;
   $$('[data-owner]').forEach((n) => (n.hidden = !auth.isOwner));
-  $('#me').innerHTML = `<b>${esc(profile.full_name || user.email)}</b><span>${profile.role === 'dono' ? 'Dono' : 'Vendedor'}</span><button class="link" data-logout>Sair</button>`;
+  $('#me').innerHTML = `<b>${esc(profile.full_name || user.email)}</b><span>${ROLE[profile.role]}</span><button class="link" data-logout>Sair</button>`;
   if (!started) { started = true; await reloadCatalog(); go(location.hash.slice(1) || 'resumo'); }
 });
 
@@ -445,14 +446,21 @@ async function loadTeam() {
   const q = $('#team-q').value.trim();
   let req = supabase.from('profiles').select('id, full_name, email, phone, role').order('role').limit(50);
   if (q) req = req.or(`full_name.ilike.%${q.replace(/[%,()]/g, '')}%,email.ilike.%${q.replace(/[%,()]/g, '')}%`);
-  else req = req.in('role', ['dono', 'vendedor']);
+  else req = req.in('role', ['dev', 'dono', 'vendedor']);
   const { data, error } = await req; if (error) { toast(friendly(error), true); return; }
-  $('#team').innerHTML = data.map((p) => `<li><div><b>${esc(p.full_name || '—')}</b><small>${esc(p.email || '')} ${esc(p.phone || '')}</small></div>
-    <select data-role="${p.id}" ${p.id === auth.user.id ? 'disabled' : ''}>${['cliente', 'vendedor', 'dono'].map((r) => `<option value="${r}" ${r === p.role ? 'selected' : ''}>${r}</option>`).join('')}</select></li>`).join('') || '<li class="muted">Ninguém encontrado.</li>';
+  // o dono não altera contas de desenvolvedor; só o desenvolvedor cria outro
+  const roles = auth.isDev ? ['cliente', 'vendedor', 'dono', 'dev'] : ['cliente', 'vendedor', 'dono'];
+  $('#team').innerHTML = data.map((p) => {
+    const locked = p.id === auth.user.id || (p.role === 'dev' && !auth.isDev);
+    const opts = (p.role === 'dev' && !auth.isDev ? ['dev'] : roles).map((r) => `<option value="${r}" ${r === p.role ? 'selected' : ''}>${ROLE[r]}</option>`).join('');
+    return `<li><div><b>${esc(p.full_name || '—')}</b><small>${esc(p.email || '')} ${esc(p.phone || '')}</small></div>
+    <select data-role="${p.id}" ${locked ? 'disabled' : ''}>${opts}</select></li>`;
+  }).join('') || '<li class="muted">Ninguém encontrado.</li>';
 }
 $('#team').addEventListener('change', async (e) => {
   const s = e.target.closest('[data-role]'); if (!s) return;
-  if (s.value === 'dono' && !confirm('Dar acesso de DONO (vê custos, lucro e despesas)?')) { loadTeam(); return; }
+  if (s.value === 'dono' && !confirm('Dar acesso de DONO (administrador: vê custos, lucro e despesas)?')) { loadTeam(); return; }
+  if (s.value === 'dev' && !confirm('Dar acesso de DESENVOLVEDOR (acesso total ao sistema)?')) { loadTeam(); return; }
   try { await rpc('set_role', { p_user: s.dataset.role, p_role: s.value }); toast('Acesso atualizado'); } catch (err) { toast(friendly(err), true); }
   loadTeam();
 });
