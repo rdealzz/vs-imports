@@ -223,3 +223,76 @@ textarea { resize: vertical; }
   .print-area tr { break-inside: avoid; }
   .print-area h2 { font-size: 13px; margin: 14px 0 6px; }
 }
+
+/* ---------- resumo: atalhos, meta, caixa, vendedores ---------- */
+.quick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.quick button { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; cursor: pointer; font-weight: 600; font-size: 14.5px; text-align: left; transition: border-color .2s, transform .2s; }
+.quick button[hidden] { display: none; }
+.quick button:hover { border-color: var(--gold); transform: translateY(-1px); }
+.quick b { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; background: var(--black); color: var(--gold-light); font-size: 18px; }
+.goal-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.goal-top span { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); }
+.goal-top b { display: block; font-family: var(--serif); font-weight: 500; font-size: 28px; }
+.goal-top b small { font-family: Archivo, sans-serif; font-size: 14px; color: var(--ink-2); }
+.goal-top strong { font-family: var(--serif); font-size: 34px; font-weight: 500; }
+.goal-bar { height: 10px; border-radius: 6px; background: var(--bg-2); margin: 10px 0 8px; overflow: hidden; }
+.goal-bar i { display: block; height: 100%; background: var(--gold-grad); border-radius: inherit; transition: width .6s var(--ease-out); }
+.goal p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.three > .panel[hidden] { display: none; }
+.pay-list, .sellers { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.pay-list li, .sellers li { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 0 10px; padding: 8px 10px 10px; border-radius: 10px; overflow: hidden; }
+.pay-list li small, .sellers li small { grid-column: 1; font-size: 12px; color: var(--ink-2); }
+.pay-list li b, .sellers li b { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-variant-numeric: tabular-nums; }
+.pay-list li i { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--gold-grad); }
+.pay-list li.tot { border-top: 1px solid var(--line); border-radius: 0; font-weight: 700; }
+.kpi em, .delta em { font-style: normal; font-weight: 700; margin-left: 4px; }
+.kpi em.up { color: #2f6a27; } .kpi em.down { color: #a2342a; }
+.kpi.gold em.up { color: #9ad48f; } .kpi.gold em.down { color: #f0a49b; }
+.kpi .vs { font-size: 11px; opacity: .8; }
+.kpi a { color: inherit; }
+.low .link { font-size: 13px; color: var(--gold-text); }
+
+/* ---------- compras ---------- */
+.grid-buy { display: flex; flex-wrap: wrap; gap: 10px; }
+.grid-buy .fld { min-width: 180px; }
+.small-note { font-size: 13px; margin: 14px 0 8px; }
+.buy-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.buy-total { margin: 0; font-size: 15px; } .buy-total b { font-family: var(--serif); font-size: 24px; font-weight: 500; }
+
+/* ---------- pedidos: entrega ---------- */
+.o-ship { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 10px 0 4px; padding: 12px 14px; border-radius: 12px; background: #F7F2E7; border-left: 3px solid var(--gold); }
+.o-ship span { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--gold-text); font-weight: 700; }
+.o-ship p { margin: 4px 0 0; font-size: 14.5px; line-height: 1.45; }
+.o-ship.warn { background: #FBEDE6; border-left-color: #c9837b; color: #8a2b22; font-size: 14px; }
+.o-ship-act { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; }
+.o-notes { margin: 6px 0 0; font-size: 13.5px; color: var(--ink-2); }
+
+/* ---------- clientes / produtos ---------- */
+.c-info { margin: -4px 0 12px; font-size: 14px; }
+.c-act { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.c-addrs td { background: #F7F2E7; }
+.c-addr-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.c-addr-list li { background: #fff; border-radius: 12px; padding: 10px 12px; display: grid; gap: 4px; justify-items: start; }
+.c-addr-list p { margin: 0; font-size: 14px; }
+.p-inv[hidden] { display: none; }
+
+@media (max-width: 1000px) { .three { grid-template-columns: 1fr; } .quick { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* foto principal da peça em todo o painel */
+img.th { width: 44px; height: 44px; flex: none; object-fit: cover; border-radius: 10px; background: var(--bg-2); }
+.cell-th { display: flex; align-items: center; gap: 10px; }
+.top li.with-th { grid-template-columns: 44px 1fr auto; align-items: center; }
+.top li.with-th small { grid-column: 2 / -1; }
+.top { padding-left: 0; list-style: none; }
+.o-items { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.o-items li { display: flex; align-items: center; gap: 10px; font-size: 14.5px; }
+.o-items small { display: block; color: var(--ink-2); font-size: 12.5px; }
+.cart-h { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.buy-pick:empty { display: none; }
+.buy-pick { display: flex; gap: 16px; align-items: center; margin: 14px 0 4px; padding: 12px; border-radius: 14px; background: var(--bg); }
+.buy-pick img { width: 120px; height: 120px; object-fit: cover; border-radius: 12px; background: #fff; }
+.buy-pick div { display: grid; gap: 4px; }
+.buy-pick b { font-family: var(--serif); font-weight: 500; font-size: 24px; }
+.buy-pick span { color: var(--ink-2); font-size: 14px; } .buy-pick small { font-size: 13px; color: var(--gold-text); font-weight: 600; }
+@media print { img.th { width: 28px; height: 28px; } }

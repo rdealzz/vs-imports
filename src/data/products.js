@@ -12,8 +12,12 @@ export const STORE = {
   cnpj: '00.000.000/0001-00', // trocar pelo CNPJ real
   email: 'contato@vsimports.com.br', // trocar pelo e-mail real
   hours: 'Seg a sáb, 10h às 20h',
-  whatsapp: '5541999999999', // trocar pelo número real (só dígitos, com DDI)
-  instagram: 'vsimports',
+  whatsapp: '554185148006', // pedidos, dúvidas e ajuda
+  instagram: 'vsimpoorts__',
+  instagramUrl: 'https://www.instagram.com/vsimpoorts__',
+  tiktok: 'vsimpoorts_',
+  tiktokUrl: 'https://www.tiktok.com/@vsimpoorts_',
+  vipGroup: 'https://chat.whatsapp.com/IScxz90K6pyKWL0bB0jOgy', // grupo de ofertas VIP
 };
 
 export const CATEGORIES = [

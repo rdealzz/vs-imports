@@ -1,6 +1,7 @@
 // Login, cadastro e "minha conta" (Supabase Auth), compartilhado pelas páginas.
 import { supabase, hasSupabase, friendly } from '../lib/supabase.js';
 import { brl } from '../data/products.js';
+import { openAddressBook } from './addresses.js';
 
 let user = null, profile = null;
 const subs = new Set();
@@ -51,7 +52,7 @@ const MODAL = `
       <form class="auth-form" id="auth-form" novalidate>
         <div class="lf-row" data-only="criar">
           <label class="lf"><input name="name" autocomplete="name" maxlength="120" placeholder=" "><span>Nome completo</span></label>
-          <label class="lf"><input name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" placeholder=" "><span>WhatsApp</span></label>
+          <label class="lf"><input name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" placeholder=" "><span>WhatsApp com DDD</span></label>
         </div>
         <label class="lf"><input name="email" type="email" autocomplete="email" required placeholder=" "><span>E-mail</span></label>
         <div class="lf-row pw-row">
@@ -113,6 +114,8 @@ async function submit(e) {
   if (mode !== 'recuperar' && password.length < 6) { msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; f.password.focus(); return; }
   if (mode === 'criar' && f.name.value.trim().length < 2) { msg.textContent = 'Digite seu nome.'; f.name.focus(); return; }
   if (mode === 'criar' && f.password2.value !== password) { msg.textContent = 'As senhas não conferem.'; f.password2.focus(); return; }
+  const phone = f.phone.value.replace(/\D/g, '').replace(/^55(\d{10,11})$/, '$1');
+  if (mode === 'criar' && (phone.length < 10 || phone.length > 11)) { msg.textContent = 'Digite seu WhatsApp com DDD (ex.: 41 98514-8006).'; f.phone.focus(); return; }
   go.disabled = true; msg.textContent = 'Aguarde…';
   try {
     if (mode === 'entrar') {
@@ -120,9 +123,13 @@ async function submit(e) {
       if (error) throw error;
       closeAuth(); after?.();
     } else if (mode === 'criar') {
+      // uma conta por pessoa: o banco confere e-mail (inclusive variações) e WhatsApp antes
+      const { data: ok, error: ce } = await supabase.rpc('check_signup', { p_email: email, p_phone: phone });
+      if (ce) throw ce;
+      if (ok !== 'ok') throw new Error(ok);
       const { data, error } = await supabase.auth.signUp({ email, password, options: {
         emailRedirectTo: location.origin + location.pathname,
-        data: { full_name: f.name.value.trim(), phone: f.phone.value.trim() },
+        data: { full_name: f.name.value.trim(), phone },
       } });
       if (error) throw error;
       if (data.session) {
@@ -159,6 +166,7 @@ function renderAccount() {
       wrap.innerHTML = `<button class="acct-btn" type="button" aria-haspopup="true" aria-expanded="false">Olá, ${first}</button>
         <div class="acct-menu" hidden>
           <button type="button" data-my-orders>Meus pedidos</button>
+          <button type="button" data-my-addr>Meus endereços</button>
           ${auth.isStaff ? `<a href="${import.meta.env.BASE_URL}admin.html">Painel da loja</a>` : ''}
           <button type="button" data-logout>Sair</button>
         </div>`;
@@ -188,6 +196,7 @@ export async function initAuth() {
     if (e.target.closest('[data-login]')) openAuth('entrar');
     if (e.target.closest('[data-logout]')) { await supabase.auth.signOut(); }
     if (e.target.closest('[data-my-orders]')) showOrders();
+    if (e.target.closest('[data-my-addr]')) openAddressBook();
   });
   if (!hasSupabase) { renderAccount(); return; }
   const { data } = await supabase.auth.getSession();

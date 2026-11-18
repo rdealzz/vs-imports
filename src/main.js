@@ -331,7 +331,7 @@ const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURICompo
 $('#visit-info').innerHTML = [
   ['Endereço', STORE.address ? `${STORE.address}<br>${STORE.city}` : `${STORE.city}<br><span class="soon">Endereço exato em breve</span>`],
   ['Horário', STORE.hours],
-  ['Atendimento', `<a href="https://wa.me/${STORE.whatsapp}" target="_blank" rel="noopener">WhatsApp</a> · <a href="https://instagram.com/${STORE.instagram}" target="_blank" rel="noopener">@${STORE.instagram}</a>`],
+  ['Atendimento', `<a href="https://wa.me/${STORE.whatsapp}" target="_blank" rel="noopener">WhatsApp</a> · <a href="${STORE.instagramUrl}" target="_blank" rel="noopener">@${STORE.instagram}</a> · <a href="${STORE.tiktokUrl}" target="_blank" rel="noopener">TikTok</a> · <a href="${STORE.vipGroup}" target="_blank" rel="noopener">Grupo VIP</a>`],
   ['Retirada', 'Compre aqui e retire na loja no mesmo dia.'],
 ].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
 // o mapa só carrega perto da tela (não pesa a abertura)

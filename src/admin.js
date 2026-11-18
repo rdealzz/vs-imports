@@ -32,6 +32,8 @@ async function reloadCatalog() {
     costs = new Map((data || []).map((c) => [c.product_id, +c.cost]));
   }
 }
+const picId = (id) => { const p = catalog.find((x) => x.id === id); return p ? pic(p) : `${import.meta.env.BASE_URL}brand/vs-icon.svg`; };
+const thumb = (id, cls = 'th') => `<img class="${cls}" src="${picId(id)}" alt="" loading="lazy" width="44" height="44">`;
 const pic = (p) => p.photos?.[0] || (p.hasLocalImages !== false ? img(p.id, 'card-sm') : `${import.meta.env.BASE_URL}brand/vs-icon.svg`);
 
 /* ================================================================ acesso */
@@ -55,7 +57,7 @@ auth.on(async (user, profile) => {
 });
 
 /* ============================================================ navegação */
-const VIEWS = { resumo: loadResumo, vender: loadPdv, pedidos: loadOrders, produtos: loadProducts, despesas: loadExpenses, relatorio: loadReport, ajustes: loadSettings };
+const VIEWS = { resumo: loadResumo, vender: loadPdv, pedidos: loadOrders, produtos: loadProducts, compras: () => loadCompras(), clientes: () => loadClientes(), despesas: loadExpenses, relatorio: loadReport, ajustes: loadSettings };
 function go(v) {
   if (!VIEWS[v] || ($(`[data-go="${v}"]`)?.hasAttribute('data-owner') && !auth.isOwner)) v = 'resumo';
   $$('.view').forEach((s) => (s.hidden = s.id !== 'v-' + v));
@@ -71,39 +73,168 @@ let rPeriod = 'hoje';
 $('#r-period').addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (!b) return; rPeriod = b.dataset.p; $$('#r-period button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); loadResumo(); });
 async function periodRange(kind, offset = 0) {
   if (kind === 'hoje') { const t = iso(new Date()); return { from: t, to: t, label: 'Hoje, ' + br(t) }; }
-  const [p] = await rpc('commercial_period', { p_offset: kind === 'anterior' ? -1 : offset });
+  if (kind === 'ontem') { const d = new Date(); d.setDate(d.getDate() - 1); const t = iso(d); return { from: t, to: t, label: br(t) }; }
+  const [p] = await rpc('commercial_period', { p_offset: kind === 'anterior' ? -1 + offset : offset });
   return { from: p.period_start, to: p.period_end, label: `${br(p.period_start)} a ${br(p.period_end)}` };
 }
+const PAYN = { pix: 'Pix', credito: 'Cartão de crédito', debito: 'Cartão de débito', dinheiro: 'Dinheiro', a_combinar: 'A combinar (site)' };
+// variação contra o período anterior equivalente
+const delta = (now, before) => {
+  if (!before) return now ? '<em class="up">novo</em>' : '';
+  const pct = ((now - before) / Math.abs(before)) * 100;
+  return `<em class="${pct >= 0 ? 'up' : 'down'}">${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(0)}%</em>`;
+};
 async function loadResumo() {
   const r = await periodRange(rPeriod);
   $('#r-label').textContent = r.label;
   const kpi = (label, value, sub = '', cls = '') => `<div class="kpi ${cls}"><span>${label}</span><b>${value}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
+  const pays = await rpc('sales_by_payment', { p_from: r.from, p_to: r.to });
+  const payTotal = pays.reduce((t, x) => t + +x.total, 0);
+  $('#pay-list').innerHTML = pays.length ? pays.map((x) => `<li><span>${PAYN[x.payment] || x.payment}</span><small>${x.orders} venda${x.orders > 1 ? 's' : ''}</small><b>${brl(+x.total)}</b><i style="width:${(+x.total / payTotal) * 100}%"></i></li>`).join('') + `<li class="tot"><span>Total</span><small></small><b>${brl(payTotal)}</b></li>`
+    : '<li class="muted">Nenhuma venda ainda. Registre a primeira em <a href="#vender" data-quick="vender">Vender</a>.</li>';
   if (auth.isOwner) {
-    const [[s], daily, top] = await Promise.all([
-      rpc('finance_summary', { p_from: r.from, p_to: r.to }), rpc('finance_daily', { p_from: r.from, p_to: r.to }), rpc('top_products', { p_from: r.from, p_to: r.to, p_limit: 8 }),
+    const prevKind = rPeriod === 'hoje' ? 'ontem' : rPeriod === 'mes' ? 'anterior' : 'anterior';
+    const prev = await periodRange(prevKind, rPeriod === 'anterior' ? -1 : 0);
+    const [[s], [ps], daily, top, sellers, { data: cfg }] = await Promise.all([
+      rpc('finance_summary', { p_from: r.from, p_to: r.to }), rpc('finance_summary', { p_from: prev.from, p_to: prev.to }),
+      rpc('finance_daily', { p_from: r.from, p_to: r.to }), rpc('top_products', { p_from: r.from, p_to: r.to, p_limit: 6 }),
+      rpc('sales_by_seller', { p_from: r.from, p_to: r.to }), supabase.from('store_settings').select('monthly_goal').maybeSingle(),
     ]);
-    $('#kpis').innerHTML = kpi('Faturamento', brl(+s.revenue), `${s.orders} vendas · ${s.items_sold} peças`, 'gold')
-      + kpi('Lucro líquido', brl(+s.net_profit), 'faturamento − custo − despesas', +s.net_profit < 0 ? 'neg' : 'pos')
-      + kpi('Lucro bruto', brl(+s.gross_profit), `margem ${(+s.gross_margin).toLocaleString('pt-BR')}%`)
-      + kpi('Custo das peças', brl(+s.cogs))
+    const vs = rPeriod === 'hoje' ? 'vs. ontem' : 'vs. mês anterior';
+    $('#kpis').innerHTML = kpi('Faturamento', brl(+s.revenue), `${s.orders} vendas · ${s.items_sold} peças ${delta(+s.revenue, +ps.revenue)} <span class="vs">${vs}</span>`, 'gold')
+      + kpi('Lucro líquido', brl(+s.net_profit), `vendas − custo − despesas ${delta(+s.net_profit, +ps.net_profit)}`, +s.net_profit < 0 ? 'neg' : 'pos')
+      + kpi('Lucro bruto', brl(+s.gross_profit), `margem de ${(+s.gross_margin).toLocaleString('pt-BR')}%`)
+      + kpi('Ticket médio', brl(+s.ticket), delta(+s.ticket, +ps.ticket))
+      + kpi('Custo das peças vendidas', brl(+s.cogs))
       + kpi('Despesas', brl(+s.expenses))
-      + kpi('Ticket médio', brl(+s.ticket))
-      + kpi('Site / Loja e redes', `${brl(+s.site_revenue)} / ${brl(+s.store_revenue)}`)
-      + kpi('Pedidos pendentes', s.pending_orders, 'aguardando pagamento', +s.pending_orders ? 'warn' : '');
+      + kpi('Vendido no site', brl(+s.site_revenue))
+      + kpi('Loja, Instagram e WhatsApp', brl(+s.store_revenue))
+      + kpi('Pedidos aguardando pagamento', s.pending_orders, +s.pending_orders ? '<a href="#pedidos" data-quick="pendentes">ver pedidos</a>' : 'nenhum pendente', +s.pending_orders ? 'warn' : '');
+    rpc('inventory_value').then((rows) => {
+      const inv = rows.reduce((t, r) => t + +r.invested, 0), pcs = rows.reduce((t, r) => t + +r.stock, 0);
+      $('#kpis').insertAdjacentHTML('beforeend', kpi('Investido em estoque', brl(inv), `${pcs} peças · vale ${brl(rows.reduce((t, r) => t + +r.retail, 0))} vendendo tudo <a href="#produtos" data-quick="produtos">ver por peça</a>`));
+    }).catch(() => {});
+    // meta do mês comercial
+    const goal = +(cfg?.monthly_goal || 0), g = $('#goal');
+    if (goal) {
+      const mr = rPeriod === 'mes' ? r : await periodRange('mes');
+      const [ms] = rPeriod === 'mes' ? [s] : await rpc('finance_summary', { p_from: mr.from, p_to: mr.to });
+      const pct = Math.min(100, (+ms.revenue / goal) * 100);
+      const daysLeft = Math.max(0, Math.round((new Date(mr.to + 'T23:59') - new Date()) / 864e5));
+      const need = Math.max(0, goal - +ms.revenue);
+      g.hidden = false;
+      g.innerHTML = `<div class="goal-top"><div><span>Meta do mês</span><b>${brl(+ms.revenue)} <small>de ${brl(goal)}</small></b></div><strong>${pct.toFixed(0)}%</strong></div>
+        <div class="goal-bar"><i style="width:${pct}%"></i></div>
+        <p>${need ? `Faltam ${brl(need)} em ${daysLeft} dia${daysLeft === 1 ? '' : 's'}: cerca de ${brl(need / Math.max(1, daysLeft))} por dia.` : 'Meta batida. Parabéns!'}</p>`;
+    } else { g.hidden = false; g.innerHTML = '<p class="muted">Defina a meta de faturamento do mês em <a href="#ajustes" data-quick="ajustes">Ajustes</a> para acompanhar o progresso aqui.</p>'; }
     const max = Math.max(1, ...daily.map((d) => +d.revenue));
     $('#chart').innerHTML = daily.length > 1 ? daily.map((d) => `<div class="bar" title="${br(d.day)}: ${brl(+d.revenue)} · lucro ${brl(+d.net_profit)}"><i style="height:${(+d.revenue / max) * 100}%"></i><em style="height:${Math.max(0, +d.net_profit) / max * 100}%"></em><span>${new Date(d.day + 'T12:00').getDate()}</span></div>`).join('')
-      : `<p class="muted big">${brl(+s.revenue)} hoje</p>`;
-    $('#top').innerHTML = top.length ? top.map((t) => `<li><span>${esc(t.name)}</span><b>${t.qty} un.</b><small>${brl(+t.revenue)} · lucro ${brl(+t.profit)}</small></li>`).join('') : '<li class="muted">Sem vendas no período.</li>';
+      : `<p class="muted">Escolha "Mês comercial" para ver o gráfico dia a dia.</p>`;
+    $('#top').innerHTML = top.length ? top.map((t) => `<li class="with-th">${thumb(t.product_id)}<span>${esc(t.name)}</span><b>${t.qty} un.</b><small>${brl(+t.revenue)} · lucro ${brl(+t.profit)}</small></li>`).join('') : '<li class="muted">Sem vendas no período.</li>';
+    $('#sellers').innerHTML = sellers.length ? sellers.map((x) => `<li><span>${esc(x.seller)}</span><small>${x.orders} vendas · ${x.items} peças</small><b>${brl(+x.total)}</b></li>`).join('') : '<li class="muted">Sem vendas no período.</li>';
   } else {
     const { data } = await supabase.from('orders').select('total, status, channel').gte('created_at', r.from + 'T00:00:00-03:00').lte('created_at', r.to + 'T23:59:59-03:00');
     const ok = (data || []).filter((o) => o.status !== 'cancelado');
-    $('#kpis').innerHTML = kpi('Vendas', ok.length, '', 'gold') + kpi('Total vendido', brl(ok.reduce((s, o) => s + +o.total, 0)));
+    $('#kpis').innerHTML = kpi('Vendas', ok.length, '', 'gold') + kpi('Total vendido', brl(ok.reduce((t, o) => t + +o.total, 0)));
     $('#chart').innerHTML = ''; $('#top').innerHTML = '';
   }
   const low = [];
   catalog.forEach((p) => p.variants.forEach((v) => { if (v.stock <= 2) low.push({ p, v }); }));
-  $('#low').innerHTML = low.length ? low.sort((a, b) => a.v.stock - b.v.stock).slice(0, 30).map(({ p, v }) => `<li class="${v.stock ? '' : 'zero'}"><img src="${pic(p)}" alt=""><span>${esc(p.name)} <small>${esc([v.color, v.size].filter(Boolean).join(' · '))}</small></span><b>${v.stock ? v.stock + ' un.' : 'esgotado'}</b></li>`).join('') : '<li class="muted">Tudo com estoque.</li>';
+  $('#low').innerHTML = low.length ? low.sort((a, b) => a.v.stock - b.v.stock).slice(0, 30).map(({ p, v }) => `<li class="${v.stock ? '' : 'zero'}"><img src="${pic(p)}" alt=""><span>${esc(p.name)} <small>${esc([v.color, v.size].filter(Boolean).join(' · '))}</small></span><b>${v.stock ? v.stock + ' un.' : 'esgotado'}</b>${auth.isOwner ? `<button class="link" data-restock="${p.id}">repor</button>` : ''}</li>`).join('') : '<li class="muted">Tudo com estoque.</li>';
 }
+// atalhos
+document.addEventListener('click', (e) => {
+  const q = e.target.closest('[data-quick]'); const rs = e.target.closest('[data-restock]');
+  if (rs) { e.preventDefault(); go('compras'); setTimeout(() => { const sel = $('#buy-form').product; sel.value = rs.dataset.restock; renderBuyGrid(); }, 50); return; }
+  if (!q) return; e.preventDefault();
+  const k = q.dataset.quick;
+  if (k === 'vender') go('vender');
+  else if (k === 'compra') go('compras');
+  else if (k === 'peca') { go('produtos'); setTimeout(() => openForm(null), 50); }
+  else if (k === 'despesa') { go('despesas'); setTimeout(() => $('#exp-form [name=amount]').focus(), 80); }
+  else if (k === 'pendentes') { go('pedidos'); $('#o-status').value = 'pendente'; loadOrders(); }
+  else if (k === 'ajustes' || k === 'produtos') go(k);
+});
+
+/* ============================================================ compras */
+let buySeq = 0;
+async function loadCompras() {
+  const seq = ++buySeq;
+  const sel = $('#buy-form').product, keep = sel.value;
+  sel.innerHTML = catalog.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  if (keep) sel.value = keep;
+  renderBuyGrid();
+  const r = await periodRange('mes');
+  const rows = await rpc('purchases_report', { p_from: r.from, p_to: r.to });
+  if (seq !== buySeq) return; // uma carga mais nova já está a caminho
+  const total = rows.reduce((t, x) => t + +x.total, 0);
+  $('#buy-label').innerHTML = `Compras no mês comercial ${r.label}: <b>${brl(total)}</b> em ${rows.reduce((t, x) => t + +x.qty, 0)} peças`;
+  $('#buy-hist').innerHTML = `<thead><tr><th>Data</th><th>Peça</th><th>Fornecedor</th><th>Grade</th><th>Qtd.</th><th>Custo un.</th><th>Total</th></tr></thead><tbody>` +
+    (rows.map((x) => `<tr><td>${new Date(x.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td><td class="cell-th">${thumb(x.product_id)}<b>${esc(x.name)}</b></td><td>${esc(x.supplier || '—')}</td><td><small>${esc(x.detail || '')}</small></td><td>${x.qty}</td><td>${brl(+x.unit_cost || 0)}</td><td><b>${brl(+x.total)}</b></td></tr>`).join('') || '<tr><td colspan="7" class="muted">Nenhuma entrada neste mês.</td></tr>') + '</tbody>';
+}
+function renderBuyGrid() {
+  const f = $('#buy-form'), p = catalog.find((x) => x.id === f.product.value);
+  if (!p) { $('#buy-grid').innerHTML = ''; $('#buy-pick').innerHTML = ''; return; }
+  const tot = p.variants.reduce((t, v) => t + (v.stock || 0), 0);
+  $('#buy-pick').innerHTML = `<img src="${pic(p)}" alt="" width="120" height="120"><div><b>${esc(p.name)}</b><span>${brl(p.finalPrice)} no site${costs.has(p.id) ? ` · custo atual ${brl(costs.get(p.id))}` : ''}</span><small>${tot ? `${tot} peça${tot > 1 ? 's' : ''} em estoque agora` : 'sem estoque: esgotado no site'}</small></div>`;
+  if (!f.cost.value && costs.has(p.id)) f.cost.value = costs.get(p.id);
+  const st = (c, s) => p.variants.find((v) => v.color === c && v.size === s)?.stock ?? 0;
+  $('#buy-grid').innerHTML = `<thead><tr><th>Cor \\ Tam.</th>${p.sizes.map((s) => `<th>${esc(s)}</th>`).join('')}</tr></thead><tbody>` +
+    p.colors.map((c) => `<tr><th><span class="dot" style="background:${hex(c.c)}"></span>${esc(c.n)}</th>${p.sizes.map((s) => `<td><input type="number" inputmode="numeric" min="0" max="9999" value="" placeholder="0" data-bq="${esc(c.n)}|${esc(s)}" aria-label="${esc(c.n)} ${esc(s)}"><small class="has">tem ${st(c.n, s)}</small></td>`).join('')}</tr>`).join('') + '</tbody>';
+  buyTotal();
+}
+function buyTotal() {
+  const f = $('#buy-form');
+  const q = $$('[data-bq]').reduce((t, i) => t + (+i.value || 0), 0);
+  $('#buy-total').innerHTML = q ? `${q} peça${q > 1 ? 's' : ''} · total da compra <b>${brl(q * (+f.cost.value || 0))}</b>` : '';
+}
+$('#buy-form').addEventListener('change', (e) => { if (e.target.name === 'product') { e.target.form.cost.value = ''; renderBuyGrid(); } });
+$('#buy-form').addEventListener('input', buyTotal);
+$('#buy-form').addEventListener('submit', async (e) => {
+  e.preventDefault(); const f = e.target;
+  const items = $$('[data-bq]').map((i) => { const [color, size] = i.dataset.bq.split('|'); return { color, size, qty: +i.value || 0 }; }).filter((x) => x.qty > 0);
+  if (!items.length) { toast('Informe quantas peças chegaram.', true); return; }
+  if (f.cost.value === '') { toast('Informe o custo por unidade.', true); f.cost.focus(); return; }
+  try {
+    await rpc('purchase_entry', { p_product: f.product.value, items, p_unit_cost: +f.cost.value, p_supplier: f.supplier.value.trim() || null, p_note: f.note.value.trim() || null });
+    toast(`Entrada registrada: ${items.reduce((t, x) => t + x.qty, 0)} peças no estoque`);
+    f.note.value = ''; await reloadCatalog(); await loadCompras();
+  } catch (err) { toast(friendly(err), true); }
+});
+
+/* ============================================================ clientes */
+$('#c-q').addEventListener('input', () => { clearTimeout(loadClientes.t); loadClientes.t = setTimeout(loadClientes, 250); });
+let cMode = 'compras';
+$('#c-mode').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; cMode = b.dataset.v; $$('#c-mode button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); loadClientes(); });
+const waLink = (ph, name) => { const d = String(ph || '').replace(/\D/g, '').replace(/^55/, ''); return d.length >= 10 ? `https://wa.me/55${d}?text=${encodeURIComponent(`Olá${name ? ', ' + name.split(' ')[0] : ''}! Aqui é da VS Imports.`)}` : ''; };
+const ago = (d) => { const n = Math.round((Date.now() - new Date(d)) / 864e5); return n <= 0 ? 'hoje' : `há ${n} dia${n > 1 ? 's' : ''}`; };
+async function loadClientes() {
+  const q = $('#c-q').value.trim();
+  if (cMode === 'cadastros') {
+    const rows = await rpc('accounts_list', { p_search: q || null, p_limit: 500 });
+    const week = rows.filter((r) => Date.now() - new Date(r.created_at) < 7 * 864e5).length;
+    $('#c-info').textContent = `${rows.length} conta${rows.length === 1 ? '' : 's'} no site · ${week} nos últimos 7 dias · ${rows.filter((r) => !+r.orders).length} ainda sem compra`;
+    $('#c-table').innerHTML = `<thead><tr><th>Conta</th><th>Contato</th><th>Criada em</th><th>Cidade</th><th>Compras</th><th></th></tr></thead><tbody>` +
+      (rows.map((c) => { const link = waLink(c.phone, c.name);
+        return `<tr><td><b>${esc(c.name || '—')}</b><small>${ROLE[c.role] || c.role}${c.confirmed ? '' : ' · e-mail não confirmado'}</small></td><td>${esc(c.phone || '')}<small>${esc(c.email || '')}</small></td>
+          <td>${new Date(c.created_at).toLocaleDateString('pt-BR')}<small>${ago(c.created_at)}</small></td><td>${esc(c.city || '—')}</td>
+          <td>${+c.orders ? `${c.orders} · <b>${brl(+c.total)}</b>` : '<small>nenhuma ainda</small>'}</td>
+          <td class="c-act">${c.city ? `<button class="pill sm" type="button" data-addrs="${c.id}">Endereços</button>` : ''}${link ? `<a class="pill sm" href="${link}" target="_blank" rel="noopener">WhatsApp</a>` : ''}</td></tr>
+          <tr class="c-addrs" id="ca-${c.id}" hidden><td colspan="6"></td></tr>`; }).join('') || '<tr><td colspan="6" class="muted">Nenhuma conta encontrada.</td></tr>') + '</tbody>';
+    return;
+  }
+  const rows = await rpc('customers_summary', { p_search: q || null, p_limit: 200 });
+  $('#c-info').textContent = `${rows.length} cliente${rows.length === 1 ? '' : 's'} com compra`;
+  $('#c-table').innerHTML = `<thead><tr><th>Cliente</th><th>Contato</th><th>Compras</th><th>Total gasto</th><th>Última compra</th><th></th></tr></thead><tbody>` +
+    (rows.map((c) => { const link = waLink(c.phone, c.name);
+      return `<tr><td><b>${esc(c.name || '—')}</b>${c.has_account ? '<small>tem conta no site</small>' : '<small>balcão</small>'}</td><td>${esc(c.phone || '')}<small>${esc(c.email || '')}</small></td><td>${c.orders}</td><td><b>${brl(+c.total)}</b></td><td>${new Date(c.last_order).toLocaleDateString('pt-BR')}<small>${ago(c.last_order)}</small></td><td>${link ? `<a class="pill sm" href="${link}" target="_blank" rel="noopener">WhatsApp</a>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="6" class="muted">Os clientes aparecem aqui depois da primeira compra (site ou balcão com nome/telefone).</td></tr>') + '</tbody>';
+}
+$('#c-table').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-addrs]'); if (!b) return;
+  const row = $(`#ca-${b.dataset.addrs}`); row.hidden = !row.hidden; if (row.hidden) return;
+  const { data, error } = await supabase.from('addresses').select('*').eq('user_id', b.dataset.addrs).order('is_default', { ascending: false });
+  row.firstElementChild.innerHTML = error ? friendly(error) : `<ul class="c-addr-list">${data.map((a) => `<li><b>${esc(a.label)}${a.is_default ? ' · principal' : ''}</b><p>${esc(addrText(a)).replace(/\n/g, '<br>')}</p><button class="pill sm" type="button" data-copy="${esc(addrText(a))}">Copiar</button></li>`).join('')}</ul>`;
+});
 
 /* ============================================================ vender */
 let cart = [];
@@ -147,7 +278,7 @@ function renderCart() {
   // agrupa a mesma peça com cores/tamanhos diferentes
   const groups = new Map();
   cart.forEach((i, k) => { if (!groups.has(i.id)) groups.set(i.id, []); groups.get(i.id).push([i, k]); });
-  $('#cart').innerHTML = cart.length ? [...groups].map(([, rows]) => `<li><b>${esc(rows[0][0].name)}</b>${rows.map(([i, k]) => `<div class="cart-row">
+  $('#cart').innerHTML = cart.length ? [...groups].map(([, rows]) => `<li><div class="cart-h">${thumb(rows[0][0].id)}<b>${esc(rows[0][0].name)}</b></div>${rows.map(([i, k]) => `<div class="cart-row">
       <span>${esc([i.color, i.size].filter(Boolean).join(' · '))}</span>
       <span class="qty"><button type="button" data-cq="${k}" data-d="-1">−</button><b>${i.qty}</b><button type="button" data-cq="${k}" data-d="1">+</button></span>
       <span>${brl(i.price * i.qty)}</span></div>`).join('')}</li>`).join('') : '<li class="muted">Toque numa peça para escolher cor e tamanho.</li>';
@@ -184,7 +315,7 @@ $('#pdv-go').addEventListener('click', async () => {
 /* ============================================================ pedidos */
 $('#o-status').addEventListener('change', loadOrders); $('#o-channel').addEventListener('change', loadOrders);
 async function loadOrders() {
-  let q = supabase.from('orders').select('id, number, created_at, channel, payment, status, subtotal, discount, total, coupon_code, customer_name, customer_phone, delivery, user_id, order_items(name, color, size, qty, unit_price)').order('created_at', { ascending: false }).limit(150);
+  let q = supabase.from('orders').select('id, number, created_at, channel, payment, status, subtotal, discount, total, coupon_code, customer_name, customer_phone, delivery, notes, shipping_address, user_id, order_items(product_id, name, color, size, qty, unit_price)').order('created_at', { ascending: false }).limit(150);
   if ($('#o-status').value) q = q.eq('status', $('#o-status').value);
   if ($('#o-channel').value) q = q.eq('channel', $('#o-channel').value);
   const { data, error } = await q; if (error) throw error;
@@ -197,10 +328,25 @@ async function loadOrders() {
     const phone = o.customer_phone || who?.phone || '';
     return `<li class="order"><div class="o-top"><b>#${o.number}</b><span class="chip-s">${CH[o.channel]}</span><span class="st st-${o.status}">${o.status}</span><span class="o-date">${new Date(o.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span><b class="o-total">${brl(+o.total)}</b></div>
       <div class="o-mid"><span>${esc(name)}${phone ? ` · <a href="https://wa.me/55${esc(phone.replace(/\D/g, '').replace(/^55/, ''))}" target="_blank" rel="noopener">${esc(phone)}</a>` : ''}</span><span>${o.payment ? PAY[o.payment] : 'pagamento a combinar'} · ${o.delivery === 'entrega' ? 'entrega' : 'retirada'}${+o.discount ? ` · desconto ${brl(+o.discount)}${o.coupon_code ? ' (' + o.coupon_code + ')' : ''}` : ''}</span></div>
-      <p class="o-items">${o.order_items.map((i) => `${i.qty}x ${esc(i.name)} <small>${esc([i.color, i.size].filter(Boolean).join(' '))}</small>`).join(' · ')}</p>
+      <ul class="o-items">${o.order_items.map((i) => `<li>${thumb(i.product_id)}<span><b>${i.qty}x</b> ${esc(i.name)}<small>${esc([i.color, i.size].filter(Boolean).join(' · '))}</small></span></li>`).join('')}</ul>
+      ${shipHTML(o)}${o.notes ? `<p class="o-notes">${esc(o.notes)}</p>` : ''}
       ${o.status === 'cancelado' ? '' : `<div class="o-act"><select data-st="${o.id}">${['pendente', 'pago', 'separado', 'entregue'].map((s) => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}</select><button class="pill sm danger" data-cancel="${o.id}" data-n="${o.number}">Cancelar e devolver estoque</button></div>`}</li>`;
   }).join('') : '<li class="muted">Nenhum pedido.</li>';
 }
+// endereço de entrega do pedido (foto do momento da compra) + copiar para etiqueta
+const addrText = (a) => [a.recipient, `${a.street}, ${a.number}${a.complement ? ' - ' + a.complement : ''}`, `${a.district} - ${a.city}/${a.state}`, `CEP ${String(a.cep).replace(/^(\d{5})(\d{3})$/, '$1-$2')}`, a.reference ? 'Ref.: ' + a.reference : ''].filter(Boolean).join('\n');
+function shipHTML(o) {
+  if (o.delivery !== 'entrega') return '';
+  const a = o.shipping_address;
+  if (!a) return '<div class="o-ship warn">Entrega sem endereço registrado: confirme com o cliente.</div>';
+  return `<div class="o-ship"><div><span>Enviar para</span><p>${esc(addrText(a)).replace(/\n/g, '<br>')}</p></div>
+    <div class="o-ship-act"><button class="pill sm" type="button" data-copy="${esc(addrText(a))}">Copiar endereço</button>
+    <a class="pill sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${a.street}, ${a.number}, ${a.city} ${a.state} ${a.cep}`)}" target="_blank" rel="noopener">Mapa</a></div></div>`;
+}
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-copy]'); if (!b) return;
+  try { await navigator.clipboard.writeText(b.dataset.copy); toast('Endereço copiado'); } catch { prompt('Copie o endereço:', b.dataset.copy); }
+});
 $('#orders').addEventListener('change', async (e) => {
   const s = e.target.closest('[data-st]'); if (!s) return;
   const { error } = await supabase.from('orders').update({ status: s.value }).eq('id', s.dataset.st);
@@ -214,18 +360,31 @@ $('#orders').addEventListener('click', async (e) => {
 
 /* ============================================================ produtos */
 $('#p-q').addEventListener('input', loadProducts);
+let inv = new Map();
 async function loadProducts() {
   const q = $('#p-q').value.trim().toLowerCase();
   const list = catalog.filter((p) => !q || p.name.toLowerCase().includes(q) || p.id.includes(q));
   const own = auth.isOwner;
-  $('#p-table').innerHTML = `<thead><tr><th></th><th>Peça</th><th>Preço</th>${own ? '<th>Custo</th><th>Margem</th>' : ''}<th>Estoque</th><th>Situação</th>${own ? '<th></th>' : ''}</tr></thead><tbody>` +
+  if (own) {
+    try {
+      const rows = await rpc('inventory_value');
+      inv = new Map(rows.map((r) => [r.product_id, r]));
+      const sum = (k) => rows.reduce((t, r) => t + +r[k], 0);
+      $('#p-inv').hidden = false;
+      $('#p-inv').innerHTML = `<div class="kpi gold"><span>Investido em estoque</span><b>${brl(sum('invested'))}</b><small>${rows.reduce((t, r) => t + +r.stock, 0)} peças × custo</small></div>
+        <div class="kpi"><span>Vale vendendo tudo</span><b>${brl(sum('retail'))}</b><small>pelo preço atual</small></div>
+        <div class="kpi pos"><span>Lucro do estoque</span><b>${brl(sum('potential_profit'))}</b><small>se vender tudo</small></div>
+        <div class="kpi ${rows.some((r) => +r.stock > 0 && !+r.cost) ? 'warn' : ''}"><span>Peças sem custo</span><b>${rows.filter((r) => +r.stock > 0 && !+r.cost).length}</b><small>cadastre o custo para o cálculo ficar certo</small></div>`;
+    } catch {}
+  }
+  $('#p-table').innerHTML = `<thead><tr><th></th><th>Peça</th><th>Preço</th>${own ? '<th>Custo</th><th>Margem</th><th>Investido</th>' : ''}<th>Estoque</th><th>Situação</th>${own ? '<th></th>' : ''}</tr></thead><tbody>` +
     list.map((p) => {
       const c = costs.get(p.id), m = c != null && p.finalPrice ? (p.finalPrice - c) / p.finalPrice * 100 : null;
       const stockTxt = p.stock == null ? '—' : `${p.stock}<small>${p.variants.length ? p.variants.filter((v) => v.stock > 0).length + '/' + p.variants.length + ' variantes' : ''}</small>`;
       const sit = !p.active ? '<span class="st st-cancelado">fora do site</span>' : !p.available ? '<span class="st st-pendente">esgotado</span>' : p.compareAt ? '<span class="st st-separado">promoção</span>' : '<span class="st st-pago">à venda</span>';
       return `<tr><td><img src="${pic(p)}" alt="" loading="lazy"></td><td><b>${esc(p.name)}</b><small>${p.id}</small></td>
         <td>${p.compareAt ? `<s>${brl(p.compareAt)}</s><br>` : ''}${brl(p.finalPrice)}</td>
-        ${own ? `<td>${c != null ? brl(c) : '—'}</td><td>${m != null ? `<b class="${m < 30 ? 'neg' : 'pos'}">${m.toFixed(0)}%</b><small>${brl(p.finalPrice - c)} por peça</small>` : '—'}</td>` : ''}
+        ${own ? `<td>${c != null ? brl(c) : '—'}</td><td>${m != null ? `<b class="${m < 30 ? 'neg' : 'pos'}">${m.toFixed(0)}%</b><small>${brl(p.finalPrice - c)} por peça</small>` : '—'}</td><td>${inv.get(p.id) ? `<b>${brl(+inv.get(p.id).invested)}</b><small>vende por ${brl(+inv.get(p.id).retail)}</small>` : '—'}</td>` : ''}
         <td>${stockTxt}</td><td>${sit}</td>${own ? `<td><button class="pill sm" data-edit="${p.id}">Editar</button></td>` : ''}</tr>`;
     }).join('') + '</tbody>';
 }
@@ -411,7 +570,7 @@ function reportHTML({ from, to, s, rows, top, closing }) {
     </div>
     ${closing ? `<p class="closed">Mês fechado em ${new Date(closing.closed_at).toLocaleString('pt-BR')}</p>` : ''}
     <h2>Mais vendidos</h2>
-    <table class="tbl small"><thead><tr><th>Peça</th><th>Qtd.</th><th>Vendido</th><th>Lucro</th></tr></thead><tbody>${top.map((t) => `<tr><td>${esc(t.name)}</td><td>${t.qty}</td><td>${brl(+t.revenue)}</td><td>${brl(+t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sem vendas.</td></tr>'}</tbody></table>
+    <table class="tbl small"><thead><tr><th>Peça</th><th>Qtd.</th><th>Vendido</th><th>Lucro</th></tr></thead><tbody>${top.map((t) => `<tr><td class="cell-th">${thumb(t.product_id)}${esc(t.name)}</td><td>${t.qty}</td><td>${brl(+t.revenue)}</td><td>${brl(+t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sem vendas.</td></tr>'}</tbody></table>
     <h2>Todas as vendas (${rows.length})</h2>
     <table class="tbl small"><thead><tr><th>#</th><th>Data</th><th>Canal</th><th>Cliente</th><th>Itens</th><th>Pagto.</th><th>Desc.</th><th>Total</th><th>Lucro</th></tr></thead><tbody>
     ${rows.map((r) => `<tr class="${r.status === 'cancelado' ? 'canc' : ''}"><td>${r.number}</td><td>${new Date(r.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td><td>${CH[r.channel]}</td><td>${esc(r.customer)}</td><td>${esc(r.items || '')}${r.status === 'cancelado' ? ' <b>(cancelado)</b>' : ''}</td><td>${r.payment ? PAY[r.payment] : '—'}</td><td>${+r.discount ? brl(+r.discount) : ''}</td><td>${brl(+r.total)}</td><td>${brl(+r.profit)}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">Nenhuma venda no período.</td></tr>'}
@@ -430,16 +589,17 @@ $('#rep-close').addEventListener('click', async () => {
 
 /* ============================================================ ajustes */
 async function loadSettings() {
-  const { data } = await supabase.from('store_settings').select('month_start_day').maybeSingle();
-  $('#set-form').day.value = data?.month_start_day || 1; previewPeriod();
+  const { data } = await supabase.from('store_settings').select('month_start_day, monthly_goal').maybeSingle();
+  $('#set-form').day.value = data?.month_start_day || 1; $('#set-form').goal.value = data?.monthly_goal ?? ''; previewPeriod();
   loadTeam();
 }
 async function previewPeriod() { try { const [p] = await rpc('commercial_period', {}); $('#set-preview').textContent = `Mês atual: ${br(p.period_start)} a ${br(p.period_end)}`; } catch {} }
 $('#set-form').addEventListener('submit', async (e) => {
   e.preventDefault(); const d = +e.target.day.value;
   if (!(d >= 1 && d <= 28)) { toast('Escolha um dia entre 1 e 28.', true); return; }
-  const { error } = await supabase.from('store_settings').update({ month_start_day: d, updated_at: new Date().toISOString() }).eq('id', true);
-  toast(error ? friendly(error) : 'Mês comercial atualizado', !!error); previewPeriod();
+  const goal = e.target.goal.value === '' ? null : Math.max(0, +e.target.goal.value);
+  const { error } = await supabase.from('store_settings').update({ month_start_day: d, monthly_goal: goal, updated_at: new Date().toISOString() }).eq('id', true);
+  toast(error ? friendly(error) : 'Ajustes salvos', !!error); previewPeriod();
 });
 $('#team-q').addEventListener('input', () => { clearTimeout(loadTeam.t); loadTeam.t = setTimeout(loadTeam, 250); });
 async function loadTeam() {

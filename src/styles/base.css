@@ -334,3 +334,42 @@ button { font: inherit; color: inherit; }
 /* janela aberta: a página atrás não rola (inclusive no iPhone) */
 .auth, .bag { overscroll-behavior: contain; touch-action: none; }
 .auth-panel, .bag-panel { touch-action: pan-y; overscroll-behavior: contain; }
+
+/* ---------- grupo VIP e redes ---------- */
+.foot-vip { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; padding-top: 40px; padding-bottom: 40px; border-bottom: 1px solid var(--line-n); }
+.foot-vip h2 { margin: 0 0 6px; font-family: var(--serif); font-weight: 500; font-size: clamp(28px, 3vw, 40px); }
+.foot-vip p { margin: 0; color: rgba(242, 238, 230, .65); max-width: 56ch; }
+.vip-btn { display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 0 28px; border-radius: 2px; background: var(--gold-grad); color: #111 !important; font-weight: 650; letter-spacing: .01em; transition: filter .2s; }
+.vip-btn:hover { filter: brightness(1.08); }
+.foot-social { display: flex; gap: 8px; }
+.foot-social a { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid rgba(200, 169, 104, .4); color: #F3EEE5; transition: background .2s, color .2s; }
+.foot-social a:hover { background: var(--gold-grad); color: #111; }
+.wa-float { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0)); z-index: 45; display: inline-flex; align-items: center; gap: 8px; height: 50px; padding: 0 18px 0 14px; border-radius: 999px; background: #1F6F4A; color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; box-shadow: 0 14px 30px -10px rgba(0, 0, 0, .45); transition: transform .3s var(--spring); }
+.wa-float svg { width: 22px; height: 22px; }
+.wa-float:hover { transform: translateY(-2px); }
+.in-store .wa-float, body:has(.auth:not([hidden])) .wa-float, body:has(.bag:not([hidden])) .wa-float { display: none; }
+@media (max-width: 760px) { .wa-float span { display: none; } .wa-float { width: 52px; padding: 0; justify-content: center; } }
+.adm .wa-float { display: none; }
+
+/* ---------- meus endereços (janela clara) ---------- */
+#addr-modal .auth-panel { width: min(680px, 100%); }
+#addr-modal h2 { margin: 4px 0 4px; font-family: var(--serif); font-weight: 500; font-size: 30px; }
+.addr-list { list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 10px; }
+.addr-list li { display: flex; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; }
+.addr-list li.muted { color: var(--ink-2); }
+.addr-list p { margin: 4px 0 0; font-size: 14.5px; color: var(--ink-2); }
+.addr-act { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.addr-list .tag, .addr-pick .tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--gold-grad); color: #111; font-size: 11px; font-weight: 700; font-style: normal; vertical-align: 2px; }
+#addr-edit .addr-form { margin-top: 16px; }
+.af-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.af-grid .s2 { grid-column: span 2; }
+.addr-form .lf { position: relative; display: block; }
+.addr-form .lf input, .addr-form .lf select { width: 100%; min-height: 54px; padding: 22px 14px 8px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; font-size: 16px; appearance: none; }
+.addr-form .lf > span { position: absolute; left: 15px; top: 17px; color: var(--ink-3); font-size: 15px; pointer-events: none; transition: transform .2s, font-size .2s, color .2s; transform-origin: left; }
+.addr-form .lf input:focus, .addr-form .lf select:focus { outline: none; border-color: var(--gold-deep); }
+.addr-form .lf input:is(:focus, :not(:placeholder-shown)) + span, .addr-form .lf.sel > span { transform: translateY(-10px); font-size: 12px; color: var(--gold-text); }
+.addr-form .check { display: flex; gap: 8px; align-items: center; margin: 12px 0 4px; font-size: 14px; }
+.addr-msg { min-height: 1.4em; font-size: 14px; color: #9a5b1c; margin: 6px 0; }
+.addr-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 560px) { .af-grid { grid-template-columns: 1fr; } .af-grid .s2 { grid-column: auto; } }
+.bag-ship { margin: 0; font-size: 13px; color: var(--ink-2); }

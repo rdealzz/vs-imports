@@ -31,6 +31,8 @@
       <button data-go="vender"><i>＋</i><span>Vender</span></button>
       <button data-go="pedidos"><i>≡</i><span>Pedidos</span></button>
       <button data-go="produtos"><i>▦</i><span>Produtos</span></button>
+      <button data-go="compras" data-owner><i>↓</i><span>Compras</span></button>
+      <button data-go="clientes" data-owner><i>☺</i><span>Clientes</span></button>
       <button data-go="despesas" data-owner><i>−</i><span>Despesas</span></button>
       <button data-go="relatorio" data-owner><i>▤</i><span>Relatório</span></button>
       <button data-go="ajustes" data-owner><i>⚙</i><span>Ajustes</span></button>
@@ -50,12 +52,54 @@
         </div>
       </header>
       <p class="period-label" id="r-label"></p>
-      <div class="kpis" id="kpis"></div>
-      <div class="two">
-        <div class="panel"><h2>Dia a dia</h2><div class="chart" id="chart"></div></div>
-        <div class="panel"><h2>Mais vendidos</h2><ol class="top" id="top"></ol></div>
+      <div class="quick" id="quick">
+        <button type="button" data-quick="vender"><b>＋</b>Nova venda</button>
+        <button type="button" data-quick="compra" data-owner><b>↓</b>Entrada de mercadoria</button>
+        <button type="button" data-quick="peca" data-owner><b>▦</b>Nova peça</button>
+        <button type="button" data-quick="despesa" data-owner><b>−</b>Lançar despesa</button>
       </div>
+      <div class="goal panel" id="goal" data-owner hidden></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="three">
+        <div class="panel"><h2>Caixa por forma de pagamento</h2><ul class="pay-list" id="pay-list"></ul></div>
+        <div class="panel"><h2>Mais vendidos</h2><ol class="top" id="top"></ol></div>
+        <div class="panel" data-owner><h2>Vendas por vendedor</h2><ul class="sellers" id="sellers"></ul></div>
+      </div>
+      <div class="panel"><h2>Dia a dia</h2><div class="chart" id="chart"></div></div>
       <div class="panel"><h2>Estoque baixo</h2><ul class="low" id="low"></ul></div>
+    </section>
+
+    <!-- COMPRAS (entrada de mercadoria) -->
+    <section class="view" id="v-compras" hidden>
+      <header class="v-head"><h1>Compras</h1></header>
+      <form class="panel buy-form" id="buy-form">
+        <h2>Entrada de mercadoria</h2>
+        <div class="grid-buy">
+          <label class="fld grow">Peça<select name="product" required></select></label>
+          <label class="fld">Custo por unidade (R$)<input name="cost" type="number" inputmode="decimal" min="0" step="0.01" required></label>
+          <label class="fld">Fornecedor<input name="supplier" maxlength="120" placeholder="Opcional"></label>
+          <label class="fld grow">Observação<input name="note" maxlength="200" placeholder="Ex.: nota fiscal 1234"></label>
+        </div>
+        <div class="buy-pick" id="buy-pick"></div>
+        <p class="muted small-note">Quantas peças chegaram de cada cor e tamanho:</p>
+        <div class="table-wrap"><table class="grid-qty" id="buy-grid"></table></div>
+        <div class="buy-foot"><p class="buy-total" id="buy-total"></p><button class="pill solid lg" type="submit">Dar entrada no estoque</button></div>
+      </form>
+      <p class="period-label" id="buy-label"></p>
+      <div class="table-wrap"><table class="tbl" id="buy-hist"></table></div>
+    </section>
+
+    <!-- CLIENTES -->
+    <section class="view" id="v-clientes" hidden>
+      <header class="v-head">
+        <h1>Clientes</h1>
+        <div class="filters-row">
+          <div class="seg" id="c-mode" role="group" aria-label="Mostrar"><button type="button" data-v="compras" aria-pressed="true">Compradores</button><button type="button" data-v="cadastros" aria-pressed="false">Cadastros no site</button></div>
+          <input class="search" id="c-q" type="search" placeholder="Buscar por nome, telefone ou e-mail…">
+        </div>
+      </header>
+      <p class="muted c-info" id="c-info"></p>
+      <div class="table-wrap"><table class="tbl" id="c-table"></table></div>
     </section>
 
     <!-- VENDER (PDV) -->
@@ -118,6 +162,7 @@
           <button class="pill solid" id="p-new" type="button" data-owner>+ Nova peça</button>
         </div>
       </header>
+      <div class="kpis p-inv" id="p-inv" hidden></div>
       <div class="table-wrap"><table class="tbl" id="p-table"></table></div>
     </section>
 
@@ -161,6 +206,7 @@
           <h2>Mês comercial</h2>
           <p class="muted">O mês da loja começa neste dia e termina no dia anterior do mês seguinte. Ex.: dia 5 = de 05/11 a 04/12.</p>
           <label class="fld">Começa no dia<input name="day" type="number" min="1" max="28" required></label>
+          <label class="fld">Meta de faturamento do mês (R$)<input name="goal" type="number" inputmode="decimal" min="0" step="100" placeholder="Ex.: 30000"></label>
           <p class="period-label" id="set-preview"></p>
           <button class="pill solid" type="submit">Salvar</button>
         </form>

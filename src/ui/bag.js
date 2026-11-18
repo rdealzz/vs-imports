@@ -1,9 +1,9 @@
 // Sacola: fica no navegador até finalizar. O pedido é criado no banco
 // (place_order), que calcula preço, promoção, estoque e os 5% da 1ª compra.
-import { brl, img, STORE } from '../data/products.js';
+import { brl, img } from '../data/products.js';
 import { loadCatalog, variantStock } from '../data/catalog.js';
-import { supabase, hasSupabase, friendly } from '../lib/supabase.js';
-import { auth, openAuth } from './auth.js';
+import { supabase, hasSupabase } from '../lib/supabase.js';
+import { auth } from './auth.js';
 
 const KEY = 'vs-bag-v2';
 let items = [];
@@ -12,7 +12,7 @@ const save = () => { try { localStorage.setItem(KEY, JSON.stringify(items)); } c
 let catalog = [];
 const find = (id) => catalog.find((p) => p.id === id);
 let eligible = false;
-let doneHTML = ''; // confirmação do último pedido (fica até adicionar algo)
+let doneHTML = '';
 
 export const bag = {
   get items() { return items; },
@@ -66,27 +66,13 @@ function render() {
     : auth.user ? `<span>Subtotal ${brl(sub)}</span>` : `<span>Subtotal ${brl(sub)}</span><button class="link" type="button" data-login>Entre ou crie sua conta e ganhe 5% na 1ª compra</button>`;
   const go = el.querySelector('#bag-go');
   go.disabled = !items.length;
-  go.textContent = auth.user ? 'Finalizar pedido' : 'Entrar para finalizar';
+  go.textContent = 'Finalizar compra';
 }
 
-async function checkout() {
-  const msg = el.querySelector('#bag-msg');
-  if (!hasSupabase) { msg.textContent = 'Finalização indisponível no momento.'; return; }
-  if (!auth.user) { openAuth('criar', { reason: 'Crie sua conta para finalizar e ganhe <b>5% de desconto</b> na primeira compra.', then: () => checkout() }); return; }
-  const go = el.querySelector('#bag-go'); go.disabled = true; msg.textContent = 'Criando seu pedido…';
-  const delivery = el.querySelector('[name=delivery]:checked')?.value || 'retirada';
-  const { data: o, error } = await supabase.rpc('place_order', {
-    items: items.map((i) => ({ id: i.id, qty: i.qty, color: i.color, size: i.size })), p_delivery: delivery,
-  });
-  go.disabled = false;
-  if (error) { msg.textContent = friendly(error); catalogReload(true); return; }
-  const lines = items.map((i) => `• ${i.qty}x ${find(i.id)?.name} (${[i.color, i.size].filter(Boolean).join(', ')})`);
-  const text = `Olá, VS Imports! Fiz o pedido #${o.number} pelo site:\n${lines.join('\n')}\nTotal: ${brl(+o.total)}${+o.discount ? ` (com ${brl(+o.discount)} de desconto)` : ''}\n${delivery === 'entrega' ? 'Quero receber em casa.' : 'Vou retirar na loja.'}`;
-  doneHTML = `<li class="bag-done"><b>Pedido #${o.number} criado!</b>
-    <p>Total ${brl(+o.total)}${+o.discount ? `, você economizou ${brl(+o.discount)}` : ''}. Agora é só combinar o pagamento com a gente.</p>
-    <a class="pill solid block" href="https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">Combinar pelo WhatsApp</a></li>`;
-  msg.textContent = '';
-  bag.clear(); refreshEligibility(); catalogReload(true);
+// finalizar: vai para a página única de checkout (conta, entrega, pagamento)
+function checkout() {
+  if (!items.length) return;
+  location.href = `${import.meta.env.BASE_URL}checkout.html`;
 }
 
 async function catalogReload(fresh = false) { catalog = await loadCatalog({ fresh }); render(); }
@@ -97,10 +83,7 @@ export function initBag({ onOpen, onClose } = {}) {
   foot.innerHTML = `
     <div class="bag-sub" id="bag-sub"></div>
     <div class="bag-total"><span>Total</span><b id="bag-total">R$ 0,00</b></div>
-    <fieldset class="bag-del"><legend class="visually-hidden">Entrega</legend>
-      <label><input type="radio" name="delivery" value="retirada" checked> Retirar na loja</label>
-      <label><input type="radio" name="delivery" value="entrega"> Receber em casa</label>
-    </fieldset>
+    <p class="bag-ship">Entregamos para todo o Brasil ou retire na loja no mesmo dia.</p>
     <button class="pill solid block" id="bag-go" type="button">Finalizar pedido</button>
     <p class="small" id="bag-msg" role="status" aria-live="polite"></p>`;
   let lastFocus;

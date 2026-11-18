@@ -10,6 +10,7 @@ export default defineConfig({
         main: resolve(import.meta.dirname, 'index.html'),
         produto: resolve(import.meta.dirname, 'produto.html'),
         politicas: resolve(import.meta.dirname, 'politicas.html'),
+        checkout: resolve(import.meta.dirname, 'checkout.html'),
         admin: resolve(import.meta.dirname, 'admin.html'),
       },
     },
