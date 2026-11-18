@@ -66,7 +66,7 @@ function makeMats() {
   });
   const S = (c, r = 0.8, mt = 0, extra) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: mt, ...extra });
   const M = {
-    wall: S(0x1D1E20, 0.92), ceil: S(0xECEAE5, 1), floor: S(0xffffff, 0.42, 0, { map: floor }),
+    wall: S(0x1D1E20, 0.92), ceil: S(0xECEAE5, 1), floor: new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.5, map: floor, clearcoat: 0.35, clearcoatRoughness: 0.22 }),
     black: S(0x1A1B1D, 0.5, 0.4), matte: S(0x1B1C1E, 0.75), slat: S(0x111214, 0.6), alu: S(0xC9CCCF, 0.4, 0.6), white: S(0xF2F2F0, 0.6),
     glass: new THREE.MeshStandardMaterial({ color: 0xD4E4E6, transparent: true, opacity: 0.12, roughness: 0.05, metalness: 0.3, depthWrite: false, side: THREE.DoubleSide }),
     outside: new THREE.MeshBasicMaterial({ map: outside }),
@@ -157,11 +157,11 @@ export class Store3D {
     this.dirty = true;
     this.hover = null; this.selected = null;
     this.onSelect = opts.onSelect; this.onHover = opts.onHover; this.onOpen = opts.onOpen;
-    const maxDpr = Math.min(devicePixelRatio || 1, isMobile ? 1.5 : 2);
-    this.renderer = new THREE.WebGLRenderer({ antialias: !isMobile || maxDpr < 1.5, powerPreference: 'high-performance', preserveDrawingBuffer: !!opts.capture });
+    const maxDpr = Math.min(devicePixelRatio || 1, isMobile ? 1.75 : 2);
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: !!opts.capture });
     this.renderer.setPixelRatio(maxDpr);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 1.12;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.shadowMap.autoUpdate = false; // sombra estática, calculada uma vez
@@ -172,7 +172,7 @@ export class Store3D {
     this.scene.background = new THREE.Color(0x0b0b0d);
     const pm = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
-    this.scene.environmentIntensity = 0.22;
+    this.scene.environmentIntensity = 0.3;
     this.camera = new THREE.PerspectiveCamera(isMobile ? 62 : 52, 1, 0.05, 120);
     this.M = makeMats();
     this.build();
@@ -215,7 +215,7 @@ export class Store3D {
     sun.castShadow = true;
     const sz = Math.max(W, D) * 0.7;
     Object.assign(sun.shadow.camera, { left: -sz, right: sz, top: sz, bottom: -sz, near: 0.5, far: 40 });
-    sun.shadow.mapSize.set(isMobile ? 1024 : 2048, isMobile ? 1024 : 2048);
+    sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.02;
     lights.add(sun, sun.target);
     [z0 - 1.6, (z0 + zb) / 2, zb + 1.8].forEach((z) => { const p = new THREE.PointLight(0xFFD9A8, 3.2, Math.max(W, D) * 1.1, 1.4); p.position.set(0, H - 0.3, z); lights.add(p); });
@@ -348,6 +348,7 @@ export class Store3D {
 
     this.placeProducts();
     this.renderer.shadowMap.needsUpdate = true;
+    this.renderer.compile(this.scene, this.camera);
   }
 
   /* --------------------------------------------- peças clicáveis (instanced) */
@@ -468,20 +469,39 @@ export class Store3D {
 
   /* --------------------------------------------------------- câmera */
   views() {
-    const L = this.L, big = Math.max(L.W, L.D), asp = this.camera.aspect || 1.6, f = asp < 1.2 ? Math.pow(1.2 / asp, 0.75) : 1;
+    const L = this.L;
     return {
-      geral: { p: [(L.W * 0.62 + 0.4) * f, (big * 0.62 + 1.4) * f, (L.D * 0.18 + 1.0) * f + L.z0], t: [0, 0.3, -0.5] },
       entrada: { p: [0.1, 1.6, L.z0 - 0.35], t: [0, 1.25, L.zb] },
       camisetas: { p: [L.xr - 0.9, 1.65, L.arL.mid + 1.7], t: [L.xl + 0.4, 1.2, L.arL.mid - 0.4] },
-      logo: { p: [L.xr - 0.7, 1.65, L.logoZ + 2.4], t: [L.xl, 1.75, L.logoZ - 0.2] },
+      logo: { p: [L.xr - 0.8, 1.65, L.logoZ + 2.4], t: [L.xl, 1.75, L.logoZ - 0.2] },
       estante: { p: [L.xl + 0.95, 1.6, L.est2.mid + 1.2], t: [L.xr, 1.55, L.est2.mid - 0.5] },
       caixa: { p: [L.xl + 1.05, 1.6, Math.min(L.caixa.z + 2.7, L.z0 - 0.4)], t: [L.caixa.x + 0.3, 1.1, L.zb] },
     };
   }
+  // caixa onde a câmera pode ficar: só o lado de dentro da sala
+  bounds() {
+    const L = this.L;
+    // corredor livre: longe das araras/estante e na altura dos olhos
+    return { x0: L.xl + 0.9, x1: L.xr - 0.75, y0: 1.1, y1: L.H - 0.25, z0: L.zb + 0.35, z1: L.z0 - 0.2 };
+  }
+  clampTarget(t) {
+    const b = this.bounds();
+    t.x = clamp(t.x, b.x0, b.x1); t.y = clamp(t.y, 0.2, this.L.H - 0.2); t.z = clamp(t.z, b.z0, b.z1);
+  }
   applyOrbit() {
     const o = this.orbit, c = this.camera, sp = Math.sin(o.phi);
-    c.position.set(o.target.x + o.r * sp * Math.sin(o.theta), o.target.y + o.r * Math.cos(o.phi), o.target.z + o.r * sp * Math.cos(o.theta));
-    c.lookAt(o.target);
+    this.clampTarget(o.target);
+    const d = new THREE.Vector3(sp * Math.sin(o.theta), Math.cos(o.phi), sp * Math.cos(o.theta));
+    // distância máxima até bater numa parede, piso ou teto
+    const b = this.bounds(), t = o.target;
+    let max = Infinity;
+    for (const [k, lo, hi] of [['x', b.x0, b.x1], ['y', b.y0, b.y1], ['z', b.z0, b.z1]]) {
+      if (d[k] > 1e-4) max = Math.min(max, (hi - t[k]) / d[k]);
+      else if (d[k] < -1e-4) max = Math.min(max, (lo - t[k]) / d[k]);
+    }
+    o.r = clamp(o.r, 0.3, Math.max(0.3, max));
+    c.position.copy(t).addScaledVector(d, o.r);
+    c.lookAt(t);
   }
   syncOrbit(p, t) {
     const o = p.clone().sub(t);
@@ -504,7 +524,8 @@ export class Store3D {
     const L = this.L, p = item.pos;
     const inward = p.x < 0 ? 1 : -1;
     const t = [p.x + inward * 0.05, p.y - (item.kind === 'hang' ? 0.32 : 0), p.z];
-    const cam = [clamp(p.x + inward * 1.25, L.xl + 0.5, L.xr - 0.5), Math.max(1.35, p.y - 0.1), clamp(p.z + 0.9, L.zb + 0.5, L.z0 - 0.3)];
+    const b = this.bounds();
+    const cam = [clamp(p.x + inward * 1.25, b.x0, b.x1), clamp(Math.max(1.35, p.y - 0.1), b.y0, b.y1), clamp(p.z + 0.9, b.z0, b.z1)];
     if (item.kind === 'stack') { cam[0] = p.x + 0.6; cam[1] = 1.55; cam[2] = p.z + 1.1; }
     this.flyTo(cam, t, dur, done);
   }
@@ -531,7 +552,7 @@ export class Store3D {
       if (pts.size === 2 && pinch) {
         stopAnim();
         const a = [...pts.values()]; const d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
-        this.orbit.r = clamp(this.orbit.r * pinch.d / d, 0.4, 16);
+        this.orbit.r = clamp(this.orbit.r * pinch.d / d, 0.3, 7);
         const mx = (a[0].x + a[1].x) / 2, my = (a[0].y + a[1].y) / 2; this.pan(mx - pinch.mx, my - pinch.my);
         pinch = { d, mx, my }; moved += 10; this.dirty = true; return;
       }
@@ -541,7 +562,7 @@ export class Store3D {
       if (moved < 4) return;
       stopAnim();
       if (last.b === 2 || last.shift) this.pan(dx, dy);
-      else { this.orbit.theta -= dx * 0.0055; this.orbit.phi = clamp(this.orbit.phi - dy * 0.0045, 0.12, 1.75); }
+      else this.look(dx, dy);
       last.x = e.clientX; last.y = e.clientY; this.dirty = true;
       this.opts.onView?.(null);
     });
@@ -557,19 +578,28 @@ export class Store3D {
     el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') { this.ptrIn = false; this.setHover(null); } if (!pts.size) this.engaged = false; });
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('wheel', (e) => {
-      if (!this.engaged && !this.fullscreen) return; // não sequestra o scroll da página
+      if (!this.fullscreen) return; // fora da loja, a roda rola a página
       e.preventDefault(); stopAnim();
-      this.orbit.r = clamp(this.orbit.r * (1 + e.deltaY * 0.0012), 0.4, 16); this.dirty = true; this.opts.onView?.(null);
+      this.orbit.r = clamp(this.orbit.r * (1 + clamp(e.deltaY, -120, 120) * 0.0012), 0.3, 7); this.dirty = true; this.opts.onView?.(null);
     }, { passive: false });
   }
-  zoom(f) { if (this.anim) { this.anim = null; this.syncOrbit(this.camera.position.clone(), this.orbit.target.clone()); } this.orbit.r = clamp(this.orbit.r * f, 0.4, 16); this.dirty = true; }
+  look(dx, dy) {
+    const o = this.orbit, cam = this.camera.position.clone();
+    o.theta += dx * 0.0042;
+    o.phi = clamp(o.phi + dy * 0.0036, 0.75, 2.25); // ~±40° para cima e para baixo
+    o.r = 1.5; // a mira fica logo à frente: nunca sai da sala
+    const sp = Math.sin(o.phi);
+    const d = new THREE.Vector3(sp * Math.sin(o.theta), Math.cos(o.phi), sp * Math.cos(o.theta));
+    o.target.copy(cam).addScaledVector(d, -o.r);
+    this.clampTarget(o.target);
+  }
+  zoom(f) { if (this.anim) { this.anim = null; this.syncOrbit(this.camera.position.clone(), this.orbit.target.clone()); } this.orbit.r = clamp(this.orbit.r * f, 0.3, 7); this.dirty = true; }
   pan(dx, dy) {
     const k = this.orbit.r * 0.0016;
     const right = new THREE.Vector3(Math.cos(this.orbit.theta), 0, -Math.sin(this.orbit.theta));
     const up = new THREE.Vector3().setFromMatrixColumn(this.camera.matrix, 1);
     this.orbit.target.addScaledVector(right, -dx * k).addScaledVector(up, dy * k);
-    const L = this.L; const t = this.orbit.target;
-    t.x = clamp(t.x, L.xl, L.xr); t.y = clamp(t.y, 0, L.H); t.z = clamp(t.z, L.zb, L.z0);
+    this.clampTarget(this.orbit.target);
   }
   pick() {
     this.raycaster.setFromCamera(this.ptr, this.camera);
@@ -587,7 +617,7 @@ export class Store3D {
       const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
       const pt = this.raycaster.ray.intersectPlane(floor, new THREE.Vector3());
       const L = this.L;
-      if (pt && pt.x > L.xl + 0.3 && pt.x < L.xr - 0.3 && pt.z > L.zb + 0.3 && pt.z < L.z0 - 0.2 && this.camera.position.y < L.H) {
+      if (pt && pt.x > L.xl + 0.3 && pt.x < L.xr - 0.3 && pt.z > L.zb + 0.3 && pt.z < L.z0 - 0.2) {
         const dir = new THREE.Vector3().subVectors(this.orbit.target, this.camera.position).setY(0).normalize();
         const cam = [pt.x, 1.6, pt.z];
         const tgt = [pt.x + dir.x * 1.5, 1.35, pt.z + dir.z * 1.5];
@@ -618,6 +648,7 @@ export class Store3D {
     if (this.anim) {
       const a = this.anim, k = clamp((now - a.t0) / a.dur, 0, 1), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
       this.camera.position.lerpVectors(a.fromP, a.toP, e);
+      { const b = this.bounds(), cp = this.camera.position; cp.set(clamp(cp.x, b.x0, b.x1), clamp(cp.y, b.y0, b.y1), clamp(cp.z, b.z0, b.z1)); }
       const t = new THREE.Vector3().lerpVectors(a.fromT, a.toT, e);
       this.camera.lookAt(t); this.orbit.target.copy(t);
       if (k >= 1) { this.syncOrbit(a.toP, a.toT); this.anim = null; a.done?.(); }

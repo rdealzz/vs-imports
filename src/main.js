@@ -4,6 +4,7 @@ import Lenis from 'lenis';
 import { PRODUCTS, CATEGORIES, STORE, byId, brl, img, asset } from './data/products.js';
 import { initBag } from './ui/bag.js';
 import { cardHTML, productUrl } from './ui/card.js';
+import { renderFooter } from './ui/footer.js';
 import { reduceMotion, isMobile } from './three/perf.js';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -100,16 +101,17 @@ mm.add('(prefers-reduced-motion: no-preference)', () => {
 });
 mm.add('(prefers-reduced-motion: reduce)', () => { gsap.set('.ring-expand', { visibility: 'visible', clipPath: 'none', position: 'relative', height: '70svh' }); });
 
-/* ---------------- 3. loja 3D (carrega perto da tela) ---------------- */
+/* ---------------- 3. loja 3D (carrega perto da tela) ----------------
+   Fora: imagem viva da loja, sem capturar gestos (a página rola livre).
+   "Entrar na loja": o palco cresce sobre a página (fundo desfocado),
+   o scroll trava e todos os gestos passam a controlar a câmera.          */
 const stage = $('#stage'), tag = $('#tag');
-let store = null;
-const storeItems = []; // lista acessível
-const lazyStore = new IntersectionObserver(async ([e]) => {
-  if (!e.isIntersecting || store) return;
-  lazyStore.disconnect();
+const slot = document.createElement('div'); slot.className = 'stage-slot';
+stage.before(slot); slot.appendChild(stage);
+let store = null, storeReady = null, inside = false;
+const loadStore = () => storeReady ??= (async () => {
   try {
     const { Store3D } = await import('./three/store.js');
-    const saved = JSON.parse(sessionStorage.getItem('vs-store-cam') || 'null');
     store = new Store3D($('#viewer'), {
       view: 'entrada',
       onView: (v) => $$('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v))),
@@ -118,35 +120,84 @@ const lazyStore = new IntersectionObserver(async ([e]) => {
       onOpen: (it) => openProduct(it.pid, it.ci),
       onFrame: () => placeTag(),
     });
-    if (saved && location.hash === '#loja') { store.flyTo(saved.p, saved.t, 0); sessionStorage.removeItem('vs-store-cam'); }
     buildStoreList();
+    return store;
   } catch (err) {
     console.warn('Loja 3D indisponível:', err);
     $('#viewer').innerHTML = `<img src="${asset('loja-entrada')}" alt="Interior da loja VS Imports" style="width:100%;height:100%;object-fit:cover">`;
-    $('.views').hidden = true; $('.stage-tools').hidden = true;
+    $('#stage-cover').hidden = true;
+    return null;
   }
-}, { rootMargin: '120% 0px' });
-lazyStore.observe(stage);
+})();
+new IntersectionObserver(([e], io) => { if (e.isIntersecting) { io.disconnect(); loadStore(); } }, { rootMargin: '150% 0px' }).observe(slot);
+
+// animação FLIP entre o lugar na página e a tela cheia
+function flip(el, from, to, dur = 560) {
+  const sx = from.width / to.width, sy = from.height / to.height;
+  el.style.transformOrigin = '0 0';
+  el.style.transform = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${sx}, ${sy})`;
+  el.getBoundingClientRect();
+  el.style.transition = reduceMotion ? 'none' : `transform ${dur}ms cubic-bezier(.16,1,.3,1)`;
+  el.style.transform = '';
+  setTimeout(() => { el.style.transition = ''; el.style.transformOrigin = ''; }, dur + 30);
+}
+async function enterStore({ push = true, cam = null } = {}) {
+  if (inside) return;
+  const s = await loadStore();
+  if (!s) return;
+  inside = true;
+  const from = stage.getBoundingClientRect();
+  stage.classList.add('in'); document.body.classList.add('in-store');
+  $('#store-backdrop').classList.add('on');
+  $('#stage-cover').hidden = true; $('#stage-ui').hidden = false;
+  lockScroll(true);
+  s.fullscreen = true; s.resize();
+  if (cam) s.flyTo(cam.p, cam.t, 0);
+  flip(stage, from, stage.getBoundingClientRect());
+  if (push) history.pushState({ loja: 1 }, '', '#loja');
+  $('#exit').focus({ preventScroll: true });
+  setTimeout(() => ($('#hint').style.opacity = 0), 7000);
+}
+function exitStore({ pop = false } = {}) {
+  if (!inside) return;
+  inside = false;
+  showTag(null);
+  const from = stage.getBoundingClientRect();
+  stage.classList.remove('in'); document.body.classList.remove('in-store');
+  $('#store-backdrop').classList.remove('on');
+  $('#stage-cover').hidden = false; $('#stage-ui').hidden = true;
+  lockScroll(false);
+  if (store) { store.fullscreen = false; store.selected = null; store.setHover(null); store.resize(); store.setView('entrada', 0); }
+  flip(stage, from, stage.getBoundingClientRect());
+  if (!pop && history.state?.loja) history.back();
+  $('#enter').focus({ preventScroll: true });
+}
+$('#enter').addEventListener('click', () => enterStore());
+$('#stage-cover').addEventListener('click', (e) => { if (e.target === e.currentTarget) enterStore(); });
+$('#exit').addEventListener('click', () => exitStore());
+$('#store-backdrop').addEventListener('click', () => exitStore());
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && inside && $('#bag').hidden) exitStore(); });
+addEventListener('popstate', () => { if (inside) exitStore({ pop: true }); });
 
 let tagItem = null;
 function showTag(it, selected) {
   tagItem = it;
-  if (!it) { tag.hidden = true; tag.classList.remove('sel'); return; }
+  if (!it || !inside) { tag.hidden = true; tag.classList.remove('sel'); return; }
   const p = byId(it.pid);
   tag.querySelector('img').src = img(p.id, it.ci ? 'card-' + it.ci : 'card');
   tag.querySelector('b').textContent = p.name;
-  tag.querySelector('span').textContent = `${brl(p.price)} · ${p.colors[it.ci].n}${selected ? '' : isMobile ? '' : ' · clique para ver'}`;
+  tag.querySelector('span').textContent = `${brl(p.price)} · ${p.colors[it.ci].n}${selected || isMobile ? '' : ' · clique para ver'}`;
   tag.querySelector('a').href = productUrl(p.id, `&cor=${it.ci}&de=loja`);
   tag.classList.toggle('sel', !!selected);
   tag.hidden = false;
   placeTag();
 }
 function placeTag() {
-  if (!tagItem || !store) return;
+  if (!tagItem || !store || tag.hidden) return;
   const pt = store.project(tagItem);
   if (!pt) { tag.style.opacity = 0; return; }
   const w = tag.offsetWidth, h = tag.offsetHeight, W = stage.clientWidth;
-  const x = Math.max(8, Math.min(W - w - 8, pt.x - w / 2)), y = Math.max(60, pt.y - h - 14);
+  const x = Math.max(8, Math.min(W - w - 8, pt.x - w / 2)), y = Math.max(64, pt.y - h - 14);
   tag.style.opacity = 1;
   tag.style.transform = `translate(${x}px, ${y}px)`;
 }
@@ -157,30 +208,24 @@ function openProduct(id, ci) {
   $('#fade').classList.add('on');
   setTimeout(() => { location.href = productUrl(id, `&cor=${ci}&de=loja`); }, reduceMotion ? 0 : 320);
 }
-// ao voltar pelo histórico (bfcache), tira o véu
 addEventListener('pageshow', () => $('#fade').classList.remove('on'));
 
 $$('[data-view]').forEach((b) => b.addEventListener('click', () => { store?.setView(b.dataset.view); showTag(null); }));
-$('#zin').addEventListener('click', () => store?.zoom(0.8));
-$('#zout').addEventListener('click', () => store?.zoom(1.25));
-const fsBtn = $('#fs');
-fsBtn.addEventListener('click', () => {
-  const on = !stage.classList.contains('fs');
-  stage.classList.toggle('fs', on); fsBtn.setAttribute('aria-pressed', String(on)); fsBtn.textContent = on ? 'Sair' : 'Tela cheia';
-  lockScroll(on); if (store) store.fullscreen = on;
-});
-addEventListener('keydown', (e) => { if (e.key === 'Escape' && stage.classList.contains('fs')) fsBtn.click(); });
-setTimeout(() => $('#hint').style.opacity = 0, 9000);
+$('#zin').addEventListener('click', () => store?.zoom(0.75));
+$('#zout').addEventListener('click', () => store?.zoom(1.3));
 
 function buildStoreList() {
-  // uma entrada por produto, focando a primeira peça dele na loja
   const seen = new Set(); const ul = $('#store-list');
   store.items.forEach((it) => {
     if (seen.has(it.pid)) return; seen.add(it.pid);
     const p = byId(it.pid);
     const li = document.createElement('li');
     li.innerHTML = `<button type="button"><img src="${img(p.id)}" alt="">${p.name}</button>`;
-    li.firstChild.addEventListener('click', () => { stage.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' }); store.selected = it; store.setHover(it); store.focusItem(it, 900); showTag(it, true); $$('[data-view]').forEach((b) => b.setAttribute('aria-pressed', 'false')); });
+    li.firstChild.addEventListener('click', async () => {
+      await enterStore();
+      store.selected = it; store.setHover(it); store.focusItem(it, 900); showTag(it, true);
+      $$('[data-view]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+    });
     ul.appendChild(li);
   });
 }
@@ -213,47 +258,6 @@ mm.add('(prefers-reduced-motion: no-preference)', () => {
 });
 if (reduceMotion) { $('.feature-label').textContent = 'Destaques'; let k = 0; $('.feature-3d').addEventListener('click', () => { k = (k + 1) % featured.length; setFeat(k); showcase?.set(k); }); }
 
-/* ---------------- 6. grãos de luz ---------------- */
-const dust = $('#estilo');
-let grains = null;
-new IntersectionObserver(async ([e], io) => {
-  if (!e.isIntersecting) return; io.disconnect();
-  try {
-    const { Grains } = await import('./fx/grains.js');
-    grains = new Grains($('.dust-canvas'));
-    let vis = false;
-    new IntersectionObserver(([en]) => { vis = en.isIntersecting; grains.toggle(vis && !document.hidden); }).observe(dust);
-    document.addEventListener('visibilitychange', () => grains.toggle(vis && !document.hidden));
-    updateDust();
-  } catch (err) { console.warn('Grãos sem WebGL2:', err); $('.dust-open').innerHTML = '<p class="display" style="font-style:italic">Estilo e qualidade<br>é com a VS.</p>'; }
-}, { rootMargin: '80% 0px' }).observe(dust);
-const rail = $$('.rail a');
-function updateDust() {
-  const H = innerHeight, s = -dust.getBoundingClientRect().top;
-  let p = 0;
-  for (let k = 1; k <= 3; k++) {
-    const top = H + (k - 1) * 1.2 * H;
-    const u = (s - (top - H)) / (1.1 * H);
-    const f = Math.min(1, Math.max(0, (u - 0.18) / 0.64));
-    if (u > 0) p = k - 1 + f;
-  }
-  grains?.setTarget(p);
-  if (grains && s > -0.45 * H) grains.startIntro();
-  const cur = Math.round(p);
-  rail.forEach((a, i) => (i === cur ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current')));
-}
-addEventListener('scroll', updateDust, { passive: true });
-addEventListener('resize', updateDust);
-
-/* ---------------- 7. editorial ---------------- */
-mm.add('(prefers-reduced-motion: no-preference)', () => {
-  const tl = gsap.timeline({ scrollTrigger: { trigger: '.ed-pin', start: 'top top', end: '+=140%', pin: true, scrub: 0.6 } });
-  tl.fromTo('.ed-img', { scale: 0.7 }, { scale: 1.25, ease: 'none' }, 0)
-    .fromTo('.ed-1, .ed-3', { x: '8vw' }, { x: '-2vw', ease: 'none' }, 0)
-    .fromTo('.ed-2, .ed-4', { x: '-8vw' }, { x: '2vw', ease: 'none' }, 0)
-    .fromTo('.ed-note', { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0.2);
-});
-
 /* ---------------- 8. catálogo ---------------- */
 const grid = $('#grid');
 grid.innerHTML = PRODUCTS.map(cardHTML).join('');
@@ -269,17 +273,28 @@ $$('[data-filter]').forEach((a) => a.addEventListener('click', (e) => {
   e.preventDefault(); setFilter(a.dataset.filter);
   if (lenis) lenis.scrollTo('#catalogo', { offset: -64 }); else $('#catalogo').scrollIntoView();
 }));
-if (!reduceMotion) ScrollTrigger.batch('.grid .card', { start: 'top 94%', onEnter: (els) => gsap.from(els, { y: 40, opacity: 0, duration: 0.9, ease: 'power3.out', stagger: 0.06 }) });
+if (!reduceMotion) {
+  gsap.set('.grid .card', { opacity: 0, y: 40 });
+  ScrollTrigger.batch('.grid .card', { start: 'top 96%', once: true, onEnter: (els) => gsap.to(els, { y: 0, opacity: 1, duration: 0.9, ease: 'power3.out', stagger: 0.06, overwrite: true }) });
+}
 
-/* ---------------- 9. loja física ---------------- */
-const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('VS Imports ' + STORE.city)}`;
+/* ---------------- 9. endereço + mapa ---------------- */
+const place = STORE.address ? `${STORE.address}, ${STORE.city}` : STORE.city;
+const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
 $('#visit-info').innerHTML = [
-  ['Onde', `${STORE.address}<br>${STORE.city}<br><a href="${mapUrl}" target="_blank" rel="noopener">Abrir no mapa</a>`],
+  ['Endereço', STORE.address ? `${STORE.address}<br>${STORE.city}` : `${STORE.city}<br><span class="soon">Endereço exato em breve</span>`],
   ['Horário', STORE.hours],
-  ['WhatsApp', `<a href="https://wa.me/${STORE.whatsapp}" target="_blank" rel="noopener">Falar com a loja</a>`],
-  ['Instagram', `<a href="https://instagram.com/${STORE.instagram}" target="_blank" rel="noopener">@${STORE.instagram}</a>`],
+  ['Atendimento', `<a href="https://wa.me/${STORE.whatsapp}" target="_blank" rel="noopener">WhatsApp</a> · <a href="https://instagram.com/${STORE.instagram}" target="_blank" rel="noopener">@${STORE.instagram}</a>`],
   ['Retirada', 'Compre aqui e retire na loja no mesmo dia.'],
 ].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+// o mapa só carrega perto da tela (não pesa a abertura)
+new IntersectionObserver(([e], io) => {
+  if (!e.isIntersecting) return; io.disconnect();
+  $('#map iframe').src = `https://maps.google.com/maps?q=${encodeURIComponent(place)}&z=${STORE.address ? 17 : 14}&output=embed`;
+}, { rootMargin: '60% 0px' }).observe($('#map'));
+$('#map-cap').innerHTML = `<span>${STORE.address ? 'Como chegar' : 'Região da loja'}</span><a class="pill sm" href="${mapUrl}" target="_blank" rel="noopener">Abrir no Google Maps</a>`;
+
+renderFooter();
 
 // links do menu com rolagem suave
 $$('a[href^="#"]').forEach((a) => { if (a.dataset.filter) return; a.addEventListener('click', (e) => { const id = a.getAttribute('href'); if (id.length < 2 || !lenis) return; e.preventDefault(); lenis.scrollTo(id, { offset: id === '#loja' ? -40 : -64 }); }); });
@@ -294,4 +309,8 @@ const goHash = () => {
   if (lenis) lenis.scrollTo(y, { immediate: true }); else scrollTo(0, y);
 };
 if ('scrollRestoration' in history && location.hash) history.scrollRestoration = 'manual';
-addEventListener('load', () => { ScrollTrigger.refresh(); requestAnimationFrame(goHash); });
+addEventListener('load', () => {
+  ScrollTrigger.refresh(); requestAnimationFrame(goHash);
+  const saved = JSON.parse(sessionStorage.getItem('vs-store-cam') || 'null');
+  if (saved && location.hash === '#loja') { sessionStorage.removeItem('vs-store-cam'); enterStore({ push: false, cam: saved }); }
+});

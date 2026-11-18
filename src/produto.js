@@ -1,6 +1,8 @@
 import { PRODUCTS, CATEGORIES, STORE, byId, brl, installments, img } from './data/products.js';
 import { initBag, bag } from './ui/bag.js';
 import { cardHTML } from './ui/card.js';
+import { renderFooter } from './ui/footer.js';
+renderFooter(undefined, { home: './' });
 
 const $ = (s) => document.querySelector(s);
 const qs = new URLSearchParams(location.search);

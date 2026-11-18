@@ -7,7 +7,10 @@ export const STORE = {
   name: 'VS Imports',
   tagline: 'a loja que veste os artistas',
   city: 'Capão Raso, Curitiba/PR',
-  address: 'Endereço a confirmar',
+  address: '', // deixe vazio até ter o endereço: o mapa mostra o bairro
+  company: 'VS Imports', // razão social
+  cnpj: '00.000.000/0001-00', // trocar pelo CNPJ real
+  email: 'contato@vsimports.com.br', // trocar pelo e-mail real
   hours: 'Seg a sáb, 10h às 20h',
   whatsapp: '5541999999999', // trocar pelo número real (só dígitos, com DDI)
   instagram: 'vsimports',

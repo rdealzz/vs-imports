@@ -22,7 +22,7 @@
     <a href="#loja">Loja 3D</a>
     <a href="#colecoes">Coleções</a>
     <a href="#catalogo">Catálogo</a>
-    <a href="#visite">Loja física</a>
+    <a href="#visite">Endereço</a>
   </nav>
   <button class="bag-btn" type="button" data-bag-open aria-label="Abrir sacola">Sacola <b data-bag-count>0</b></button>
 </header>
@@ -84,30 +84,37 @@
   <!-- 3. Loja 3D -->
   <section class="store" id="loja" aria-labelledby="loja-t">
     <div class="store-head wrap">
-      <h2 id="loja-t" class="display">Passeie pela loja.</h2>
-      <p>Arraste para olhar em volta, toque no piso para andar e toque numa peça para ver. A disposição é a mesma da loja física.</p>
+      <p class="eyebrow">Loja 3D</p>
+      <h2 id="loja-t" class="display">Passeie pela loja<br>antes de vir.</h2>
+      <p>A mesma disposição da loja física. Entre, olhe em volta e toque numa peça para abrir a página dela.</p>
     </div>
-    <div class="stage" id="stage">
+    <div class="store-backdrop" id="store-backdrop" aria-hidden="true"></div>
+    <div class="stage" id="stage" role="region" aria-label="Loja 3D">
       <div class="viewer" id="viewer" aria-label="Loja 3D interativa da VS Imports"></div>
-      <div class="views" role="group" aria-label="Ir para">
-        <button class="chip" data-view="entrada" aria-pressed="true">Entrada</button>
-        <button class="chip" data-view="camisetas" aria-pressed="false">Camisetas</button>
-        <button class="chip" data-view="logo" aria-pressed="false">Parede do logo</button>
-        <button class="chip" data-view="estante" aria-pressed="false">Bonés e tênis</button>
-        <button class="chip" data-view="caixa" aria-pressed="false">Caixa</button>
-        <button class="chip" data-view="geral" aria-pressed="false">De cima</button>
+      <div class="stage-cover" id="stage-cover">
+        <button class="enter" id="enter" type="button"><span class="enter-dot" aria-hidden="true"></span>Entrar na loja 3D</button>
+        <p class="small">Arraste, aproxime e toque nas peças</p>
+      </div>
+      <div class="stage-ui" id="stage-ui" hidden>
+        <div class="views" role="group" aria-label="Ir para">
+          <button class="chip" data-view="entrada" aria-pressed="true">Entrada</button>
+          <button class="chip" data-view="camisetas" aria-pressed="false">Camisetas</button>
+          <button class="chip" data-view="logo" aria-pressed="false">Parede do logo</button>
+          <button class="chip" data-view="estante" aria-pressed="false">Bonés e tênis</button>
+          <button class="chip" data-view="caixa" aria-pressed="false">Caixa</button>
+        </div>
+        <button class="exit" id="exit" type="button">Sair da loja <span aria-hidden="true">×</span></button>
+        <div class="stage-tools">
+          <button class="round" id="zin" aria-label="Aproximar">+</button>
+          <button class="round" id="zout" aria-label="Afastar">−</button>
+        </div>
+        <p class="stage-hint" id="hint">Arraste para olhar · role ou pince para aproximar · toque no piso para andar</p>
       </div>
       <div class="tag" id="tag" hidden>
         <img alt="" width="80" height="100">
         <div><b></b><span></span></div>
         <a class="pill solid sm" href="#">Ver peça</a>
       </div>
-      <div class="stage-tools">
-        <button class="round" id="zin" aria-label="Aproximar">+</button>
-        <button class="round" id="zout" aria-label="Afastar">−</button>
-        <button class="round wide" id="fs" aria-pressed="false">Tela cheia</button>
-      </div>
-      <p class="stage-hint" id="hint">Arraste para girar · role com o mouse depois de clicar para aproximar</p>
       <div class="fade" id="fade"></div>
     </div>
     <ul class="store-list wrap" id="store-list" aria-label="Peças na loja"></ul>
@@ -135,40 +142,6 @@
     </div>
   </section>
 
-  <!-- 6. Grãos de luz: Estilo e qualidade é com a VS -->
-  <section class="dust" id="estilo" aria-labelledby="estilo-t">
-    <div class="dust-stage">
-      <canvas class="dust-canvas" aria-hidden="true"></canvas>
-      <nav class="rail" aria-label="Capítulos">
-        <a href="#estilo" aria-current="true"><i></i><span>Estilo</span></a>
-        <a href="#estilo-1"><i></i><span>Camiseta</span></a>
-        <a href="#estilo-2"><i></i><span>Boné</span></a>
-        <a href="#estilo-3"><i></i><span>VS</span></a>
-      </nav>
-    </div>
-    <div class="dust-open">
-      <h2 id="estilo-t" class="visually-hidden">Estilo e qualidade</h2>
-      <p class="dust-sub">A frase da parede da loja, feita de 110 mil grãos de luz.<br><span class="small">role devagar</span></p>
-    </div>
-    <article class="dust-ch" id="estilo-1"><div><h3>Primeiro, o caimento.</h3><p>Malha pesada, gola que não abre e um corte reto que fica bem lavagem depois de lavagem.</p></div></article>
-    <article class="dust-ch" id="estilo-2"><div><h3>Depois, o detalhe.</h3><p>Bordado em alto relevo, fecho de metal e aba no ângulo certo. É o que faz a peça parecer cara.</p></div></article>
-    <article class="dust-ch" id="estilo-3"><div><h3>E é com a VS.</h3><p>Tudo isso escolhido a dedo e exposto como merece, na loja e aqui.</p><a class="pill solid" href="#catalogo">Ver o catálogo</a></div></article>
-  </section>
-
-  <!-- 7. Editorial -->
-  <section class="editorial" id="editorial" aria-labelledby="ed-t">
-    <div class="ed-pin">
-      <h2 id="ed-t" class="visually-hidden">Estilo não precisa ser discreto</h2>
-      <p class="ed-l ed-1" aria-hidden="true">Estilo não</p>
-      <p class="ed-l ed-2" aria-hidden="true">precisa ser discreto.</p>
-      <p class="ed-l ed-3" aria-hidden="true">A gente gosta de peça</p>
-      <p class="ed-l ed-4" aria-hidden="true">que chama atenção.</p>
-      <p class="ed-note ed-n1">peças que aparecem<br>de longe</p>
-      <p class="ed-note ed-n2">e que ficam melhores<br>quanto mais você usa</p>
-      <figure class="ed-img"><img src="/img/camiseta-estilo-mood.webp" alt="Camiseta Estilo e Qualidade sobre um pedestal com luz quente" width="900" height="1200" loading="lazy"></figure>
-    </div>
-  </section>
-
   <!-- 8. Catálogo -->
   <section class="catalog wrap" id="catalogo" aria-labelledby="cat-t">
     <div class="sec-head">
@@ -178,19 +151,21 @@
     <ul class="grid" id="grid"></ul>
   </section>
 
-  <!-- 9. Loja física -->
+  <!-- 9. Endereço -->
   <section class="visit wrap" id="visite" aria-labelledby="vis-t">
-    <div>
+    <div class="visit-copy">
+      <p class="eyebrow">Loja física</p>
       <h2 id="vis-t" class="display">Venha<br>experimentar.</h2>
+      <dl class="visit-info" id="visit-info"></dl>
     </div>
-    <dl class="visit-info" id="visit-info"></dl>
+    <figure class="map" id="map">
+      <iframe title="Mapa da região da loja VS Imports" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+      <figcaption id="map-cap"></figcaption>
+    </figure>
   </section>
 </main>
 
-<footer class="site-foot wrap">
-  <span class="brand">VS<span>IMPORTS</span></span>
-  <span>A loja que veste os artistas. Imagens ilustrativas, preços sujeitos a alteração.</span>
-</footer>
+<footer class="foot" id="rodape"></footer>
 
 <aside class="bag" id="bag" aria-label="Sacola" hidden>
   <div class="bag-panel">

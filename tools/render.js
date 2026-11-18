@@ -32,7 +32,7 @@ function shot(scene, camera, w, h, bg) {
   }
   return c.toDataURL('image/webp', 0.86);
 }
-const darkBg = (x, w, h) => { const g = x.createRadialGradient(w * 0.45, h * 0.38, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.75); g.addColorStop(0, '#2b2723'); g.addColorStop(0.55, '#171617'); g.addColorStop(1, '#0c0c0e'); x.fillStyle = g; x.fillRect(0, 0, w, h); };
+const darkBg = (x, w, h) => { const g = x.createRadialGradient(w * 0.45, h * 0.38, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.75); g.addColorStop(0, '#F1EDE6'); g.addColorStop(0.6, '#E0DAD0'); g.addColorStop(1, '#CEC6B9'); x.fillStyle = g; x.fillRect(0, 0, w, h); };
 const sandBg = (x, w, h) => { const g = x.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#d9c7a8'); g.addColorStop(0.5, '#b9946a'); g.addColorStop(1, '#5a3f28'); x.fillStyle = g; x.fillRect(0, 0, w, h); const r = x.createRadialGradient(w * 0.25, h * 0.2, 0, w * 0.25, h * 0.2, w * 0.9); r.addColorStop(0, 'rgba(255,236,200,.55)'); r.addColorStop(1, 'rgba(255,236,200,0)'); x.fillStyle = r; x.fillRect(0, 0, w, h); };
 
 function productScene(p, ci, { pedestal = false } = {}) {

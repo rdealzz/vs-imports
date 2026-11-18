@@ -1,16 +1,16 @@
 .pdp-main { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(20px, 3vw, 48px); padding: 76px var(--gutter) 0; max-width: 1500px; margin: 0 auto; animation: pagein .7s var(--ease-out); }
 @keyframes pagein { from { opacity: 0; transform: translateY(14px); } }
-.pdp-media { position: sticky; top: 76px; height: calc(100svh - 92px); min-height: 460px; border-radius: 18px; overflow: hidden; background: radial-gradient(ellipse at 45% 38%, #2b2723, #151416 60%, #0c0c0e); border: 1px solid var(--line); }
+.pdp-media { position: sticky; top: 76px; height: calc(100svh - 92px); min-height: 460px; border-radius: 18px; overflow: hidden; background: radial-gradient(ellipse at 45% 40%, #FBFAF7, #E6E1D8 70%); border: 1px solid var(--line); }
 .pdp-3d { position: absolute; inset: 0; }
 .pdp-3d canvas { width: 100% !important; height: 100% !important; cursor: grab; }
 .pdp-media-ui { position: absolute; left: 14px; right: 14px; top: 14px; display: flex; justify-content: space-between; gap: 12px; align-items: center; pointer-events: none; }
 .pdp-media-ui > * { pointer-events: auto; }
-.hint3d { background: rgba(20, 20, 22, .7); padding: 6px 12px; border-radius: 999px; }
+.hint3d { background: rgba(255, 255, 255, .7); padding: 6px 12px; border-radius: 999px; }
 .pdp-thumbs { position: absolute; left: 14px; bottom: 14px; display: flex; gap: 8px; }
 .pdp-thumbs button { all: unset; cursor: pointer; width: 54px; height: 68px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
 .pdp-thumbs button[aria-pressed="true"] { border-color: var(--ink); }
 .pdp-thumbs img { width: 100%; height: 100%; object-fit: cover; }
-.pdp-photo { position: absolute; inset: 0; background: #000; }
+.pdp-photo { position: absolute; inset: 0; background: var(--surface); }
 .pdp-photo img { width: 100%; height: 100%; object-fit: cover; }
 .pdp-info { padding: 12px 0 40px; }
 .crumb a { color: var(--ink-2); }
