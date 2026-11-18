@@ -142,10 +142,14 @@ button { font: inherit; color: inherit; }
 .foot-col h3 { margin: 0 0 6px; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; font-weight: 500; color: var(--brass-soft); }
 .foot-col a, .foot-col span { color: rgba(242, 238, 230, .78); transition: color .2s; }
 .foot-col a:hover { color: #fff; }
-.foot-legal { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; align-items: center; padding-top: 22px; padding-bottom: 22px; border-top: 1px solid var(--line-n); font-size: 13px; color: rgba(242, 238, 230, .5); }
-.pay { display: flex; gap: 6px; flex-wrap: wrap; }
-.pay i { font-style: normal; font-size: 12px; padding: 5px 10px; border: 1px solid var(--line-n); border-radius: 6px; color: rgba(242, 238, 230, .7); }
-.foot-giant { margin: 0; padding: 0 var(--gutter) calc(10px + env(safe-area-inset-bottom, 0)); font-style: italic; font-weight: 900; font-size: 15.2vw; line-height: .78; letter-spacing: -.05em; white-space: nowrap; text-align: center; color: transparent; -webkit-text-stroke: 1px rgba(242, 238, 230, .16); background: linear-gradient(180deg, rgba(201, 168, 106, .28), transparent 75%); -webkit-background-clip: text; background-clip: text; user-select: none; }
+/* fecho minimalista: selo entre dois filetes de ouro */
+.foot-seal { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 22px; padding-top: 8px; padding-bottom: 28px; }
+.foot-seal .rule { height: 1px; background: linear-gradient(90deg, transparent, rgba(200, 169, 104, .55)); }
+.foot-seal .rule:last-child { background: linear-gradient(90deg, rgba(200, 169, 104, .55), transparent); }
+.foot-seal img { width: 52px; height: 52px; opacity: .95; }
+.foot-legal { display: flex; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; align-items: center; padding-top: 18px; padding-bottom: calc(26px + env(safe-area-inset-bottom, 0)); border-top: 1px solid var(--line-n); font-size: 12px; letter-spacing: .04em; color: rgba(242, 238, 230, .45); }
+.pay { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: rgba(242, 238, 230, .55); }
+@media (max-width: 760px) { .foot-legal { flex-direction: column; text-align: center; } }
 @media (max-width: 900px) {
   .foot-promise { grid-template-columns: 1fr 1fr; }
   .foot-promise div:nth-child(3) { padding-left: 0; border-left: 0; }
@@ -241,3 +245,89 @@ button { font: inherit; color: inherit; }
 .bag-done { display: grid; gap: 10px; padding: 18px 0 !important; grid-template-columns: 1fr !important; }
 .bag-done p { margin: 0; color: var(--ink-2); }
 #bag-go:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---------- tela de conta (luxo): duas colunas, tudo visível sem rolar ---------- */
+.auth-panel.lux { width: min(940px, 100%); max-height: calc(100svh - 32px); padding: 0; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); overflow: hidden; border-radius: 24px; border: 0; }
+.auth-art { position: relative; background: var(--black); color: var(--on-night); overflow: hidden; }
+.auth-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 40% 55%; opacity: .55; }
+.auth-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11, 11, 11, .2), rgba(11, 11, 11, .88) 70%); }
+.auth-art-in { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 16px; padding: 34px 32px; }
+.auth-art-in > img { width: 96px; height: 96px; margin-bottom: auto; }
+.auth-quote { margin: 0; font-family: var(--serif); font-size: 34px; line-height: 1.02; }
+.auth-quote em { background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.auth-perks { list-style: none; margin: 0; padding: 16px 0 0; border-top: 1px solid rgba(200, 169, 104, .35); display: grid; gap: 9px; font-size: 14px; color: rgba(248, 244, 243, .78); }
+.auth-perks li { display: flex; gap: 10px; align-items: baseline; }
+.auth-perks li::before { content: ""; flex: none; width: 6px; height: 6px; transform: rotate(45deg) translateY(-1px); background: var(--gold-grad); }
+.auth-perks b { color: #fff; font-weight: 600; }
+.auth-body { position: relative; padding: 30px 36px 22px; display: flex; flex-direction: column; overflow: auto; }
+.lux .auth-x { position: absolute; right: 16px; top: 14px; width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 50%; background: transparent; font-size: 20px; cursor: pointer; }
+.lux .eyebrow { margin-bottom: 8px; }
+.lux h2 { margin: 0 0 4px; font-family: var(--serif); font-weight: 500; font-size: 40px; line-height: 1; }
+.lux .auth-sub { margin: 6px 0 16px; font-size: 14px; }
+.lux .auth-tabs { display: flex; gap: 26px; padding: 0; background: none; border-radius: 0; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.lux .auth-tabs button { padding: 10px 0; border-radius: 0; font-size: 14px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); box-shadow: none; background: none; position: relative; }
+.lux .auth-tabs button[aria-selected="true"] { color: var(--ink); background: none; box-shadow: none; }
+.lux .auth-tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--gold-grad); }
+.lux .auth-form { gap: 6px; }
+.lf-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 0 18px; }
+.lf-row[hidden] { display: none; }
+.pw-row { grid-template-columns: 1fr 1fr; }
+.pw-row:has(> [hidden]) { grid-template-columns: 1fr; }
+/* campo de linha fina com rótulo flutuante */
+.lux .auth-form label.lf { position: relative; display: block; padding-top: 16px; }
+.lux .auth-form label.lf input { width: 100%; border: 0; border-bottom: 1px solid rgba(11, 11, 11, .22); border-radius: 0; background: transparent; padding: 8px 0 9px; font-size: 16px; transition: border-color .2s; }
+.lux .auth-form label.lf input:focus { outline: 0; border-bottom-color: var(--gold-deep); box-shadow: 0 1px 0 var(--gold-deep); }
+.lux .auth-form label.lf span { position: absolute; left: 0; top: 24px; font-size: 15px; color: var(--ink-3); pointer-events: none; transition: transform .2s var(--ease-out), font-size .2s, color .2s, top .2s; }
+.lux .auth-form label.lf input:focus + span, .lux .auth-form label.lf input:not(:placeholder-shown) + span { top: 2px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-text); }
+.lux .auth-form label.pw input { padding-right: 34px; }
+.eye { position: absolute; right: 0; bottom: 6px; width: 30px; height: 30px; display: grid; place-items: center; border: 0; background: none; color: var(--ink-2); cursor: pointer; padding: 0; }
+.eye:hover { color: var(--ink); }
+.eye .x { opacity: 0; transition: opacity .2s; }
+.eye[aria-pressed="false"] .x { opacity: 1; }
+.auth-row { display: flex; justify-content: space-between; margin-top: 2px; }
+.auth-row[hidden] { display: none; }
+.lux .auth-row .link { font-size: 13px; padding: 4px 0; }
+.lux .check { margin-top: 10px; font-size: 13px !important; color: var(--ink-2) !important; }
+.lux .auth-msg { min-height: 18px; margin: 6px 0 2px; font-size: 13px; }
+.lux #auth-go { margin-top: 4px; }
+.lux #auth-go:hover { background: var(--gold-grad); color: var(--black); }
+.auth-legal { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); text-align: center; }
+.auth-legal[hidden] { display: none; }
+.auth-legal a { color: var(--ink-2); }
+.auth-safe { margin: auto 0 0; padding-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--ink-3); }
+.auth-safe i { width: 10px; height: 12px; border: 1.5px solid var(--gold-deep); border-radius: 2px 2px 3px 3px; position: relative; }
+.auth-safe i::before { content: ""; position: absolute; left: 1px; right: 1px; top: -6px; height: 6px; border: 1.5px solid var(--gold-deep); border-bottom: 0; border-radius: 4px 4px 0 0; }
+/* telas baixas: aperta o espaçamento para continuar sem rolagem */
+@media (max-height: 760px) and (min-width: 761px) {
+  .auth-body { padding: 22px 32px 16px; }
+  .lux h2 { font-size: 34px; }
+  .lux .auth-sub { margin-bottom: 10px; }
+  .auth-art-in > img { width: 72px; height: 72px; }
+}
+/* celular: tela cheia, foto vira faixa fina no topo */
+@media (max-width: 760px) {
+  .auth:has(.lux) { padding: 0; place-items: stretch; }
+  .auth-panel.lux { grid-template-columns: 1fr; grid-template-rows: auto 1fr; width: 100%; height: 100svh; max-height: none; border-radius: 0; }
+  .auth-art { height: 92px; }
+  .auth-art-in { flex-direction: row; align-items: center; justify-content: flex-start; padding: 14px 18px; gap: 14px; }
+  .auth-art-in > img { width: 58px; height: 58px; margin: 0; }
+  .auth-quote { font-size: 22px; }
+  .auth-perks { display: none; }
+  .auth-body { padding: 18px 20px calc(14px + env(safe-area-inset-bottom, 0)); }
+  .lux .auth-x { top: -78px; right: 14px; color: #fff; border-color: rgba(255, 255, 255, .35); z-index: 2; }
+  .lux h2 { font-size: 32px; }
+  .lux .eyebrow { display: none; }
+  .lux .auth-sub { margin: 4px 0 10px; }
+  .lux .auth-tabs { margin-bottom: 4px; }
+  .lux .auth-form label.lf { padding-top: 14px; }
+  .lux .auth-form label.lf span { top: 22px; }
+}
+@media (max-width: 760px) and (max-height: 700px) { .auth-safe { display: none; } .auth-legal { display: none; } }
+.lux .auth-form label.lf[hidden], .lux .auth-form .check[hidden] { display: none; }
+@media (max-width: 760px) and (max-height: 700px) {
+  .auth-art { height: 76px; }
+  .lux .auth-x { top: -64px; }
+  .lux h2 { font-size: 28px; }
+  .lux .auth-sub { font-size: 13px; margin-bottom: 6px; }
+  .lux #auth-go { min-height: 46px; }
+}

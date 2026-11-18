@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..800&display=swap" rel="stylesheet">
-<link rel="preload" as="image" href="/img/capa-loja.webp" fetchpriority="high">
+<link rel="preload" as="image" href="/brand/vs-logo.svg" fetchpriority="high">
 <link rel="stylesheet" href="/src/styles/base.css">
 <link rel="stylesheet" href="/src/styles/home.css">
 </head>
@@ -33,38 +33,18 @@
 
 <main>
   <!-- 1. Capa -->
-  <section class="cover" id="abertura" aria-labelledby="titulo">
-    <div class="cover-grid wrap">
-      <div class="cover-copy">
-        <p class="eyebrow rise" style="--d:0">Capão Raso · Curitiba · loja física e online</p>
-        <h1 id="titulo" class="cover-title">
-          <span class="line"><span class="rise" style="--d:1">A loja que</span></span>
-          <span class="line"><span class="rise" style="--d:2">veste os</span></span>
-          <span class="line"><em class="rise" style="--d:3">artistas.</em></span>
-        </h1>
-        <p class="cover-lede rise" style="--d:4">Camisetas, bonés, tênis e bermudas escolhidos a dedo. Entre na nossa loja em 3D, escolha a peça e retire no mesmo dia.</p>
-        <div class="row rise" style="--d:5">
-          <a class="pill solid lg" href="#loja"><span class="dia" aria-hidden="true"></span>Entrar na loja 3D</a>
-          <a class="pill lg" href="#catalogo">Ver catálogo</a>
-        </div>
-        <ul class="cover-facts rise" style="--d:6">
-          <li><b>5% off</b><span>na primeira compra</span></li>
-          <li><b>30 dias</b><span>para trocar</span></li>
-          <li><b>Mesmo dia</b><span>retirada na loja</span></li>
-        </ul>
+  <section class="sign" id="abertura" aria-labelledby="titulo">
+    <canvas class="sign-rays" aria-hidden="true"></canvas>
+    <div class="sign-stage">
+      <h1 id="titulo" class="sign-logo"><img src="/brand/vs-logo.svg" alt="VS Imports" width="1000" height="1000" fetchpriority="high"></h1>
+      <p class="sign-line">A loja que veste os artistas.</p>
+      <div class="sign-acts">
+        <a class="sign-btn" href="#loja">Entrar na loja</a>
+        <a class="sign-link" href="#catalogo">Ver as peças</a>
       </div>
-      <figure class="cover-art">
-        <div class="arch">
-          <img src="/img/capa-loja.webp" alt="Parede do logo da VS Imports, com araras de camisetas e luz quente" width="1500" height="1900" fetchpriority="high" decoding="async">
-        </div>
-        <a class="cover-card" id="cover-card" href="#catalogo"></a>
-        <span class="cover-seal" aria-hidden="true"><img src="/brand/vs-icon.svg" alt="" width="84" height="84"></span>
-      </figure>
     </div>
-    <div class="marquee" aria-hidden="true"><div class="marquee-track">
-      <span>Camisetas</span><i></i><span>Bonés</span><i></i><span>Tênis</span><i></i><span>Bermudas</span><i></i><span>Loja 3D</span><i></i><span>Capão Raso</span><i></i>
-      <span>Camisetas</span><i></i><span>Bonés</span><i></i><span>Tênis</span><i></i><span>Bermudas</span><i></i><span>Loja 3D</span><i></i><span>Capão Raso</span><i></i>
-    </div></div>
+    <p class="sign-corner left">Capão Raso, Curitiba</p>
+    <p class="sign-corner right" id="sign-hours">Aberto de segunda a sábado, das 10h às 20h</p>
   </section>
 
   <!-- 2. Anel de peças (base do vídeo) que abre para a loja -->

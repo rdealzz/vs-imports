@@ -39,11 +39,15 @@ export function renderFooter(el = document.getElementById('rodape'), { home = ''
       <h3>Atendimento</h3>
     </div>
   </div>
+  <div class="foot-seal wrap" aria-hidden="true">
+    <span class="rule"></span>
+    <img src="${import.meta.env.BASE_URL}brand/vs-icon.svg" alt="" width="52" height="52">
+    <span class="rule"></span>
+  </div>
   <div class="foot-legal wrap">
     <span id="foot-company"></span>
-    <span class="pay" aria-label="Formas de pagamento"><i>Pix</i><i>Visa</i><i>Mastercard</i><i>Elo</i><i>Dinheiro</i></span>
+    <span class="pay" aria-label="Formas de pagamento">Pix · Visa · Mastercard · Elo · Dinheiro</span>
   </div>
-  <p class="foot-giant" aria-hidden="true">VS IMPORTS</p>
 `;
   el.querySelector('#foot-contact').insertAdjacentHTML('beforeend', `
     <a href="https://wa.me/${STORE.whatsapp}" target="_blank" rel="noopener">WhatsApp</a>

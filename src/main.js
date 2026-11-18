@@ -31,20 +31,21 @@ let lastY = 0;
 const onScroll = () => {
   const y = scrollY;
   head.classList.toggle('solid', y > 8);
+  head.classList.toggle('on-dark', y < innerHeight * 0.9); // sobre a fachada escura
   head.classList.toggle('hide', y > innerHeight * 1.2 && y > lastY + 2 && !document.documentElement.style.overflow);
   if (y < lastY - 2) head.classList.remove('hide');
   lastY = y;
 };
 addEventListener('scroll', onScroll, { passive: true });
+onScroll();
 
 /* ---------------- 1. capa ---------------- */
-{
-  const p = PRODUCTS.find((x) => x.featured) || PRODUCTS[0];
-  const c = $('#cover-card');
-  c.href = productUrl(p.id);
-  c.innerHTML = `<img src="${img(p.id)}" alt="" width="58" height="72"><div><small>Lançamento</small><b>${p.name}</b><span>${brl(p.price)}</span></div>`;
-}
 document.body.classList.add('ready');
+$('#sign-hours').textContent = `Aberto ${STORE.hours.replace('Seg a sáb', 'de segunda a sábado').replace(/(\d+)h às (\d+)h/, 'das $1h às $2h')}`;
+// luz quente saindo de trás do letreiro (leve; sem WebGL2 fica só o letreiro)
+import('./fx/heroRays.js')
+  .then(({ HeroRays }) => new HeroRays($('#abertura'), $('.sign-rays'), $('.sign-logo img')))
+  .catch((err) => { console.warn('Luz da capa indisponível:', err); $('.sign-rays')?.remove(); });
 
 /* ---------------- 2. anel de peças ---------------- */
 const orbit = $('.ring-orbit');
@@ -239,13 +240,46 @@ let showcaseReady = null;
 const loadShowcase = () => showcaseReady ??= import('./three/viewer.js').then(({ Showcase }) => { showcase = new Showcase($('#feature-canvas'), featured); }).catch((err) => console.warn(err));
 new IntersectionObserver(([e], io) => { if (e.isIntersecting) { io.disconnect(); loadShowcase(); } }, { rootMargin: '100% 0px' }).observe($('#destaques'));
 addEventListener('load', () => setTimeout(() => idle(() => storeReady?.then(() => idle(loadShowcase)) ?? loadShowcase()), 1400));
-mm.add('(prefers-reduced-motion: no-preference)', () => {
-  ScrollTrigger.create({
-    trigger: '.feature-pin', start: 'top top', end: `+=${featured.length * 70}%`, pin: true, anticipatePin: 1,
-    onUpdate: (s) => { const v = s.progress * (featured.length - 1); showcase?.set(v); setFeat(Math.round(v)); },
-  });
+// navegação sem precisar rolar: setas e pontos
+const fnav = $('.feature-label');
+fnav.outerHTML = `<div class="feature-nav" role="group" aria-label="Destaques">
+  <button type="button" class="fn-arrow" data-fd="-1" aria-label="Peça anterior">‹</button>
+  ${featured.map((p, i) => `<button type="button" class="fn-dot" data-fi="${i}" aria-label="${p.name}"></button>`).join('')}
+  <button type="button" class="fn-arrow" data-fd="1" aria-label="Próxima peça">›</button></div>`;
+const markDots = (i) => $$('.fn-dot').forEach((d, k) => d.setAttribute('aria-current', String(k === i)));
+let featST = null;
+function goFeat(i) {
+  i = Math.max(0, Math.min(featured.length - 1, i));
+  if (featST) {
+    // leva a rolagem até a peça (a pinagem continua, só que sem esforço)
+    const y = featST.start + (featST.end - featST.start) * (i / (featured.length - 1));
+    if (lenis) lenis.scrollTo(y, { duration: 0.9 }); else scrollTo({ top: y, behavior: 'smooth' });
+  } else { setFeat(i); showcase?.set(i); markDots(i); }
+}
+$('#destaques').addEventListener('click', (e) => {
+  const d = e.target.closest('[data-fd]'), f = e.target.closest('[data-fi]');
+  if (d) goFeat(featIdx + +d.dataset.fd); else if (f) goFeat(+f.dataset.fi);
 });
-if (reduceMotion) { $('.feature-label').textContent = 'Destaques'; let k = 0; $('.feature-3d').addEventListener('click', () => { k = (k + 1) % featured.length; setFeat(k); showcase?.set(k); }); }
+markDots(0);
+// celular: deslizar para o lado troca de peça
+{
+  let sx = 0, sy = 0;
+  const box = $('.feature-3d');
+  box.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+  box.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) goFeat(featIdx + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+}
+mm.add('(prefers-reduced-motion: no-preference)', () => {
+  featST = ScrollTrigger.create({
+    // trecho fixo mais curto (≈35% de tela por peça) e encaixe automático em cada peça
+    trigger: '.feature-pin', start: 'top top', end: `+=${(featured.length - 1) * 38}%`, pin: true, anticipatePin: 1,
+    snap: { snapTo: 1 / (featured.length - 1), duration: { min: 0.2, max: 0.5 }, delay: 0.08, ease: 'power2.out' },
+    onUpdate: (s) => { const v = s.progress * (featured.length - 1); showcase?.set(v); const k = Math.round(v); setFeat(k); markDots(k); },
+  });
+  return () => { featST = null; };
+});
 
 /* ---------------- 8. catálogo ---------------- */
 const grid = $('#grid');
@@ -273,11 +307,6 @@ loadCatalog().then((list) => {
     const below = $$('.card', grid).filter((c) => c.getBoundingClientRect().top > innerHeight);
     gsap.set(below, { opacity: 0, y: 40 });
     ScrollTrigger.batch(below, { start: 'top 96%', once: true, onEnter: (els) => gsap.to(els, { y: 0, opacity: 1, duration: 0.9, ease: 'power3.out', stagger: 0.06, overwrite: true }) });
-  }
-  const f = list.find((x) => x.featured && x.available) || list[0];
-  if (f) {
-    const c = $('#cover-card'); c.href = productUrl(f.id);
-    c.innerHTML = `<img src="${f.photos?.[0] || img(f.id)}" alt="" width="58" height="72"><div><small>${f.compareAt ? 'Promoção' : 'Lançamento'}</small><b>${f.name}</b><span>${brl(f.finalPrice)}</span></div>`;
   }
 });
 initAuth();

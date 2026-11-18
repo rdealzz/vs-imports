@@ -18,28 +18,54 @@ async function loadProfile() {
   profile = data;
 }
 
+// olho para mostrar/ocultar a senha
+const EYE = `<button type="button" class="eye" data-eye aria-label="Mostrar senha" aria-pressed="false">
+  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path class="o" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle class="o" cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path class="x" d="M3 3l18 18" stroke="currentColor" stroke-width="1.6"/></svg></button>`;
+
 const MODAL = `
 <div class="auth" id="auth" hidden>
-  <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="auth-t">
-    <button class="round auth-x" type="button" data-auth-close aria-label="Fechar">×</button>
-    <img class="auth-logo" src="${import.meta.env.BASE_URL}brand/vs-icon.svg" alt="" width="56" height="56">
-    <h2 id="auth-t">Entrar</h2>
-    <p class="auth-sub" id="auth-sub">Ganhe <b>5% de desconto</b> na sua primeira compra.</p>
-    <div class="auth-tabs" role="tablist">
-      <button role="tab" data-tab="entrar" aria-selected="true">Entrar</button>
-      <button role="tab" data-tab="criar" aria-selected="false">Criar conta</button>
+  <div class="auth-panel lux" role="dialog" aria-modal="true" aria-labelledby="auth-t">
+    <aside class="auth-art" aria-hidden="true">
+      <img class="auth-photo" src="${import.meta.env.BASE_URL}img/capa-loja.webp" alt="">
+      <div class="auth-art-in">
+        <img src="${import.meta.env.BASE_URL}brand/vs-logo.svg" alt="" width="96" height="96">
+        <p class="auth-quote">A loja que veste<br><em>os artistas.</em></p>
+        <ul class="auth-perks">
+          <li><b>5% off</b> na primeira compra</li>
+          <li><b>Pedidos</b> acompanhados em tempo real</li>
+          <li><b>Lançamentos</b> antes de todo mundo</li>
+          <li><b>Retirada</b> no mesmo dia na loja</li>
+        </ul>
+      </div>
+    </aside>
+    <div class="auth-body">
+      <button class="auth-x" type="button" data-auth-close aria-label="Fechar">×</button>
+      <p class="eyebrow">Minha conta</p>
+      <h2 id="auth-t">Entrar</h2>
+      <p class="auth-sub" id="auth-sub">Ganhe <b>5% de desconto</b> na sua primeira compra.</p>
+      <div class="auth-tabs" role="tablist">
+        <button role="tab" data-tab="entrar" aria-selected="true">Entrar</button>
+        <button role="tab" data-tab="criar" aria-selected="false">Criar conta</button>
+      </div>
+      <form class="auth-form" id="auth-form" novalidate>
+        <div class="lf-row" data-only="criar">
+          <label class="lf"><input name="name" autocomplete="name" maxlength="120" placeholder=" "><span>Nome completo</span></label>
+          <label class="lf"><input name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" placeholder=" "><span>WhatsApp</span></label>
+        </div>
+        <label class="lf"><input name="email" type="email" autocomplete="email" required placeholder=" "><span>E-mail</span></label>
+        <div class="lf-row pw-row">
+          <label class="lf pw" data-only="entrar criar"><input name="password" type="password" autocomplete="current-password" minlength="6" required placeholder=" "><span>Senha</span>${EYE}</label>
+          <label class="lf pw" data-only="criar"><input name="password2" type="password" autocomplete="new-password" minlength="6" placeholder=" "><span>Confirmar senha</span>${EYE}</label>
+        </div>
+        <div class="auth-row" data-only="entrar"><span></span><button class="link" type="button" data-tab="recuperar">Esqueci minha senha</button></div>
+        <label class="check" data-only="criar"><input name="optin" type="checkbox" checked> Quero receber os lançamentos e ofertas</label>
+        <p class="auth-msg" id="auth-msg" role="status" aria-live="polite"></p>
+        <button class="pill solid block lg" type="submit" id="auth-go">Entrar</button>
+        <button class="link" type="button" data-tab="entrar" data-only="recuperar">Voltar para entrar</button>
+        <p class="auth-legal" data-only="criar">Ao criar a conta você concorda com os <a href="${import.meta.env.BASE_URL}politicas.html#termos">termos</a> e a <a href="${import.meta.env.BASE_URL}politicas.html#privacidade">política de privacidade</a>.</p>
+      </form>
+      <p class="auth-safe"><i aria-hidden="true"></i>Seus dados ficam protegidos e nunca são compartilhados.</p>
     </div>
-    <form class="auth-form" id="auth-form" novalidate>
-      <label data-only="criar">Nome completo<input name="name" autocomplete="name" maxlength="120"></label>
-      <label data-only="criar">WhatsApp<input name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(41) 9 9999-9999" maxlength="20"></label>
-      <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
-      <label data-only="entrar criar">Senha<input name="password" type="password" autocomplete="current-password" minlength="6" required></label>
-      <label class="check" data-only="criar"><input name="optin" type="checkbox" checked> Quero receber os lançamentos</label>
-      <p class="auth-msg" id="auth-msg" role="status" aria-live="polite"></p>
-      <button class="pill solid block" type="submit" id="auth-go">Entrar</button>
-      <button class="link" type="button" data-tab="recuperar" data-only="entrar">Esqueci minha senha</button>
-      <button class="link" type="button" data-tab="entrar" data-only="recuperar">Voltar para entrar</button>
-    </form>
   </div>
 </div>
 <div class="auth" id="orders-modal" hidden>
@@ -61,6 +87,11 @@ function setMode(m) {
   el.querySelector('#auth-go').textContent = { entrar: 'Entrar', criar: 'Criar conta e ganhar 5%', recuperar: 'Enviar link' }[m];
   el.querySelector('[name=password]').autocomplete = m === 'criar' ? 'new-password' : 'current-password';
   el.querySelector('#auth-msg').textContent = '';
+  el.querySelector('#auth-sub').innerHTML = {
+    entrar: 'Bem-vindo de volta. Entre para acompanhar seus pedidos.',
+    criar: 'Crie sua conta e ganhe <b>5% de desconto</b> na primeira compra.',
+    recuperar: 'Digite seu e-mail e enviamos um link para criar uma nova senha.',
+  }[m];
 }
 export function openAuth(m = 'entrar', { reason, then } = {}) {
   if (!hasSupabase) { alert('Login indisponível no momento.'); return; }
@@ -79,6 +110,7 @@ async function submit(e) {
   if (!/^\S+@\S+\.\S+$/.test(email)) { msg.textContent = 'Digite um e-mail válido.'; f.email.focus(); return; }
   if (mode !== 'recuperar' && password.length < 6) { msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; f.password.focus(); return; }
   if (mode === 'criar' && f.name.value.trim().length < 2) { msg.textContent = 'Digite seu nome.'; f.name.focus(); return; }
+  if (mode === 'criar' && f.password2.value !== password) { msg.textContent = 'As senhas não conferem.'; f.password2.focus(); return; }
   go.disabled = true; msg.textContent = 'Aguarde…';
   try {
     if (mode === 'entrar') {
@@ -142,6 +174,8 @@ export async function initAuth() {
   el.addEventListener('click', (e) => {
     if (e.target === el || e.target.closest('[data-auth-close]')) closeAuth();
     const t = e.target.closest('[data-tab]'); if (t) { e.preventDefault(); setMode(t.dataset.tab); }
+    const eye = e.target.closest('[data-eye]');
+    if (eye) { e.preventDefault(); const i = eye.closest('label').querySelector('input'); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; eye.setAttribute('aria-pressed', String(show)); eye.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha'); }
   });
   el.querySelector('#auth-form').addEventListener('submit', submit);
   const om = document.getElementById('orders-modal');
