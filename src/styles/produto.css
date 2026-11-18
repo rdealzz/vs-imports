@@ -14,7 +14,7 @@
 .pdp-photo img { width: 100%; height: 100%; object-fit: cover; }
 .pdp-info { padding: 12px 0 40px; }
 .crumb a { color: var(--ink-2); }
-.pdp-info h1 { font-stretch: 72%; font-weight: 750; font-size: clamp(40px, 4.6vw, 72px); line-height: .92; letter-spacing: -.02em; margin: 8px 0 16px; }
+.pdp-info h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(38px, 4.2vw, 66px); line-height: .98; letter-spacing: -.02em; margin: 8px 0 16px; }
 .price { display: flex; flex-direction: column; gap: 2px; margin: 0 0 18px; }
 .price b { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .desc { color: var(--ink-2); max-width: 52ch; margin: 0 0 24px; }
@@ -33,7 +33,7 @@
 .perks dt { color: var(--ink-2); }
 .perks dd { margin: 0; }
 .related { padding-top: clamp(60px, 10vh, 120px); }
-.related h2 { font-stretch: 72%; font-weight: 750; font-size: clamp(32px, 4vw, 56px); margin: 0 0 24px; }
+.related h2 { font-family: var(--serif); font-weight: 500; font-size: clamp(32px, 4vw, 56px); margin: 0 0 24px; }
 .grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px 14px; }
 @media (max-width: 860px) {
   .pdp-main { grid-template-columns: 1fr; padding-top: 70px; }
@@ -42,3 +42,13 @@
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 10px; }
   .perks div { grid-template-columns: 1fr; gap: 2px; }
 }
+.sizes button:disabled { opacity: .35; text-decoration: line-through; cursor: not-allowed; }
+.sizes button small { display: block; font-size: 10px; font-weight: 500; color: var(--gold-text); }
+.sizes button { display: inline-grid; place-content: center; }
+.swatches button.out { opacity: .4; }
+.swatches button.out::before { content: ""; position: absolute; left: 50%; top: 4px; bottom: 4px; width: 1.5px; background: var(--ink); transform: rotate(45deg); }
+#add:disabled { opacity: .5; cursor: not-allowed; }
+.pdp-thumbs { flex-wrap: wrap; max-width: calc(100% - 28px); }
+.pdp-thumbs button { position: relative; }
+.tag3d { position: absolute; right: 4px; bottom: 4px; font-size: 10px; font-weight: 700; background: var(--gold-grad); color: #111; padding: 1px 5px; border-radius: 4px; }
+.price b, #price { font-size: 26px; font-weight: 650; }

@@ -1,6 +1,6 @@
 .pol { padding-top: 120px; }
 .pol-head { max-width: 760px; padding-bottom: 48px; border-bottom: 1px solid var(--line); }
-.pol-head h1 { margin: 0 0 16px; font-style: italic; font-weight: 400; font-stretch: 80%; font-size: clamp(48px, 7vw, 110px); line-height: .9; letter-spacing: -.02em; }
+.pol-head h1 { margin: 0 0 16px; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: clamp(48px, 7vw, 110px); line-height: .9; letter-spacing: -.02em; }
 .pol-head p:last-child { color: var(--ink-2); margin: 0; max-width: 56ch; }
 .pol-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: clamp(28px, 5vw, 80px); padding-top: 48px; }
 .pol-toc { position: sticky; top: 90px; align-self: start; display: flex; flex-direction: column; gap: 4px; }
@@ -8,7 +8,7 @@
 .pol-toc a[aria-current], .pol-toc a:hover { color: var(--ink); border-left-color: var(--brass); }
 .pol-text { max-width: 720px; }
 .pol-text section { padding-bottom: 48px; margin-bottom: 48px; border-bottom: 1px solid var(--line); scroll-margin-top: 90px; }
-.pol-text h2 { margin: 0 0 20px; font-stretch: 72%; font-weight: 700; font-size: clamp(30px, 3.4vw, 46px); letter-spacing: -.01em; line-height: 1; }
+.pol-text h2 { margin: 0 0 20px; font-family: var(--serif); font-weight: 500; font-size: clamp(30px, 3.4vw, 46px); letter-spacing: -.01em; line-height: 1; }
 .pol-text h3 { margin: 26px 0 6px; font-size: 16px; font-weight: 600; }
 .pol-text p { margin: 0 0 12px; color: var(--ink-2); line-height: 1.65; }
 .pol-text b { color: var(--ink); font-weight: 600; }

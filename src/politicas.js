@@ -1,7 +1,9 @@
 import { STORE } from './data/products.js';
 import { initBag } from './ui/bag.js';
+import { initAuth } from './ui/auth.js';
 import { renderFooter } from './ui/footer.js';
 
+initAuth();
 initBag();
 renderFooter(undefined, { home: './' });
 document.getElementById('upd').textContent = '18/11/2026';

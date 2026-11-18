@@ -3,6 +3,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import { PRODUCTS, CATEGORIES, STORE, byId, brl, img, asset } from './data/products.js';
 import { initBag } from './ui/bag.js';
+import { initAuth } from './ui/auth.js';
+import { loadCatalog, LOCAL_CATALOG } from './data/catalog.js';
 import { cardHTML, productUrl } from './ui/card.js';
 import { renderFooter } from './ui/footer.js';
 import { reduceMotion, isMobile } from './three/perf.js';
@@ -28,36 +30,21 @@ const head = $('.site-head');
 let lastY = 0;
 const onScroll = () => {
   const y = scrollY;
-  head.classList.toggle('solid', y > innerHeight * 0.85);
+  head.classList.toggle('solid', y > 8);
   head.classList.toggle('hide', y > innerHeight * 1.2 && y > lastY + 2 && !document.documentElement.style.overflow);
   if (y < lastY - 2) head.classList.remove('hide');
   lastY = y;
 };
 addEventListener('scroll', onScroll, { passive: true });
 
-/* ---------------- 1. abertura com luz ---------------- */
-const fontsReady = document.fonts?.ready ?? Promise.resolve();
-fontsReady.then(async () => {
-  try {
-    const { Daylight } = await import('./fx/daylight.js');
-    const dl = new Daylight($('#abertura'), $('.light-canvas'), $('#titulo'), { mood: 'noite', onReady: () => document.body.classList.add('ready') });
-    $$('.mood [data-mood]').forEach((b) => b.addEventListener('click', () => {
-      $$('.mood [data-mood]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
-      dl.setMood(b.dataset.mood);
-    }));
-    // setas do teclado no grupo de rádio
-    $('.mood').addEventListener('keydown', (e) => {
-      if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
-      const bs = $$('.mood [data-mood]'); const i = bs.findIndex((b) => b.getAttribute('aria-checked') === 'true');
-      const n = bs[(i + (e.key === 'ArrowRight' ? 1 : bs.length - 1)) % bs.length]; n.click(); n.focus();
-    });
-  } catch (err) {
-    console.warn('Abertura sem WebGL2:', err);
-    document.documentElement.classList.add('no-gl');
-    document.body.classList.add('ready');
-  }
-});
-setTimeout(() => document.body.classList.add('ready'), 3200);
+/* ---------------- 1. capa ---------------- */
+{
+  const p = PRODUCTS.find((x) => x.featured) || PRODUCTS[0];
+  const c = $('#cover-card');
+  c.href = productUrl(p.id);
+  c.innerHTML = `<img src="${img(p.id)}" alt="" width="58" height="72"><div><small>Lançamento</small><b>${p.name}</b><span>${brl(p.price)}</span></div>`;
+}
+document.body.classList.add('ready');
 
 /* ---------------- 2. anel de peças ---------------- */
 const orbit = $('.ring-orbit');
@@ -65,7 +52,7 @@ const tileProducts = PRODUCTS.slice(0, 10);
 const tiles = tileProducts.map((p, i) => {
   const t = document.createElement('div');
   t.className = 'tile';
-  t.innerHTML = `<img src="${img(p.id, i % 2 ? 'mood' : 'card')}" alt="" loading="lazy">`;
+  t.innerHTML = `<img src="${img(p.id, 'card-sm')}" alt="" decoding="async" width="480" height="600">`;
   orbit.appendChild(t);
   return { el: t, a: (i / tileProducts.length) * Math.PI * 2 };
 });
@@ -77,8 +64,8 @@ const drawRing = () => {
   tiles.forEach((t, i) => {
     const a = t.a + ringState.spin;
     const x = Math.cos(a) * R * 100 / 0.15, y = Math.sin(a) * R * 100 / 0.15; // em % do próprio tile
-    t.el.style.transform = `translate(${x.toFixed(2)}%, ${y.toFixed(2)}%) rotate(${(45 + Math.sin(a * 2 + i) * 8).toFixed(2)}deg) scale(${ringState.scale})`;
-    t.el.style.opacity = ringState.fade;
+    t.el.style.transform = `translate3d(${x.toFixed(1)}%, ${y.toFixed(1)}%, 0) rotate(${(45 + Math.sin(a * 2 + i) * 8).toFixed(1)}deg) scale(${ringState.scale.toFixed(3)})`;
+    if (t.op !== ringState.fade) { t.el.style.opacity = ringState.fade; t.op = ringState.fade; }
   });
 };
 drawRing();
@@ -130,6 +117,8 @@ const loadStore = () => storeReady ??= (async () => {
   }
 })();
 new IntersectionObserver(([e], io) => { if (e.isIntersecting) { io.disconnect(); loadStore(); } }, { rootMargin: '150% 0px' }).observe(slot);
+const idle = (fn, t = 1500) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: t + 2000 }) : setTimeout(fn, t));
+addEventListener('load', () => setTimeout(() => idle(() => loadStore()), 900));
 
 // animação FLIP entre o lugar na página e a tela cheia
 function flip(el, from, to, dur = 560) {
@@ -246,10 +235,10 @@ const setFeat = (i) => {
   finfo.innerHTML = `<div><b>${p.name}</b><span>${brl(p.price)}</span></div><a class="pill sm" href="${productUrl(p.id)}">Ver peça</a><div class="bar"><i style="transform:scaleX(${(i + 1) / featured.length})"></i></div>`;
 };
 setFeat(0);
-new IntersectionObserver(async ([e], io) => {
-  if (!e.isIntersecting) return; io.disconnect();
-  try { const { Showcase } = await import('./three/viewer.js'); showcase = new Showcase($('#feature-canvas'), featured); } catch (err) { console.warn(err); }
-}, { rootMargin: '100% 0px' }).observe($('#destaques'));
+let showcaseReady = null;
+const loadShowcase = () => showcaseReady ??= import('./three/viewer.js').then(({ Showcase }) => { showcase = new Showcase($('#feature-canvas'), featured); }).catch((err) => console.warn(err));
+new IntersectionObserver(([e], io) => { if (e.isIntersecting) { io.disconnect(); loadShowcase(); } }, { rootMargin: '100% 0px' }).observe($('#destaques'));
+addEventListener('load', () => setTimeout(() => idle(() => storeReady?.then(() => idle(loadShowcase)) ?? loadShowcase()), 1400));
 mm.add('(prefers-reduced-motion: no-preference)', () => {
   ScrollTrigger.create({
     trigger: '.feature-pin', start: 'top top', end: `+=${featured.length * 70}%`, pin: true, anticipatePin: 1,
@@ -260,10 +249,12 @@ if (reduceMotion) { $('.feature-label').textContent = 'Destaques'; let k = 0; $(
 
 /* ---------------- 8. catálogo ---------------- */
 const grid = $('#grid');
-grid.innerHTML = PRODUCTS.map(cardHTML).join('');
+grid.innerHTML = LOCAL_CATALOG.map(cardHTML).join('');
+let currentFilter = 'todos';
 const filters = $('#filters');
 filters.innerHTML = [{ id: 'todos', name: 'Todos' }, ...CATEGORIES].map((c, i) => `<button class="chip" data-f="${c.id}" aria-pressed="${!i}">${c.name}</button>`).join('');
 function setFilter(id) {
+  currentFilter = id;
   $$('[data-f]', filters).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === id)));
   $$('.card', grid).forEach((c) => { c.hidden = id !== 'todos' && c.dataset.cat !== id; });
   ScrollTrigger.refresh();
@@ -273,10 +264,23 @@ $$('[data-filter]').forEach((a) => a.addEventListener('click', (e) => {
   e.preventDefault(); setFilter(a.dataset.filter);
   if (lenis) lenis.scrollTo('#catalogo', { offset: -64 }); else $('#catalogo').scrollIntoView();
 }));
-if (!reduceMotion) {
-  gsap.set('.grid .card', { opacity: 0, y: 40 });
-  ScrollTrigger.batch('.grid .card', { start: 'top 96%', once: true, onEnter: (els) => gsap.to(els, { y: 0, opacity: 1, duration: 0.9, ease: 'power3.out', stagger: 0.06, overwrite: true }) });
-}
+
+// catálogo vivo do banco: preços, promoções, fotos, esgotados e peças novas
+loadCatalog().then((list) => {
+  grid.innerHTML = list.map(cardHTML).join('');
+  setFilter(currentFilter);
+  if (!reduceMotion) {
+    const below = $$('.card', grid).filter((c) => c.getBoundingClientRect().top > innerHeight);
+    gsap.set(below, { opacity: 0, y: 40 });
+    ScrollTrigger.batch(below, { start: 'top 96%', once: true, onEnter: (els) => gsap.to(els, { y: 0, opacity: 1, duration: 0.9, ease: 'power3.out', stagger: 0.06, overwrite: true }) });
+  }
+  const f = list.find((x) => x.featured && x.available) || list[0];
+  if (f) {
+    const c = $('#cover-card'); c.href = productUrl(f.id);
+    c.innerHTML = `<img src="${f.photos?.[0] || img(f.id)}" alt="" width="58" height="72"><div><small>${f.compareAt ? 'Promoção' : 'Lançamento'}</small><b>${f.name}</b><span>${brl(f.finalPrice)}</span></div>`;
+  }
+});
+initAuth();
 
 /* ---------------- 9. endereço + mapa ---------------- */
 const place = STORE.address ? `${STORE.address}, ${STORE.city}` : STORE.city;

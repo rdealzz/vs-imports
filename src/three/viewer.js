@@ -125,6 +125,7 @@ export class Showcase {
     this.renderer = setupRenderer(host);
     this.scale = new AdaptiveScale({ max: this.renderer.getPixelRatio(), min: 0.7, onChange: (v) => { this.renderer.setPixelRatio(v); this.resize(); } });
     this.scene = studio(this.renderer, { floor: false });
+    this.renderer.shadowMap.enabled = false;
     this.camera = new THREE.PerspectiveCamera(30, 1, 0.1, 40);
     this.camera.position.set(0, 0.1, 4.6);
     this.items = products.map((p, i) => {

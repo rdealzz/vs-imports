@@ -1,58 +1,120 @@
-// Sacola simples guardada no navegador. Finaliza pelo WhatsApp da loja.
-import { byId, brl, img, STORE } from '../data/products.js';
+// Sacola: fica no navegador até finalizar. O pedido é criado no banco
+// (place_order), que calcula preço, promoção, estoque e os 5% da 1ª compra.
+import { brl, img, STORE } from '../data/products.js';
+import { loadCatalog, variantStock } from '../data/catalog.js';
+import { supabase, hasSupabase, friendly } from '../lib/supabase.js';
+import { auth, openAuth } from './auth.js';
 
-const KEY = 'vs-bag-v1';
+const KEY = 'vs-bag-v2';
 let items = [];
-try { items = JSON.parse(localStorage.getItem(KEY) || '[]').filter((i) => byId(i.id)); } catch { items = []; }
+try { items = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { items = []; }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch {} };
-const listeners = new Set();
+let catalog = [];
+const find = (id) => catalog.find((p) => p.id === id);
+let eligible = false;
+let doneHTML = ''; // confirmação do último pedido (fica até adicionar algo)
 
 export const bag = {
   get items() { return items; },
+  // ci = índice da cor; guarda também o nome da cor (é o que o banco usa na variante)
   add(id, ci = 0, size = '') {
+    const p = find(id);
+    const color = p?.colors[ci]?.n || '';
     const ex = items.find((i) => i.id === id && i.ci === ci && i.size === size);
-    if (ex) ex.qty++; else items.push({ id, ci, size, qty: 1 });
-    save(); emit();
+    const inBag = ex ? ex.qty : 0;
+    const st = p ? variantStock(p, color, size) : null;
+    if (st != null && inBag + 1 > st) return { ok: false, msg: st ? `Só temos ${st} em estoque.` : 'Esgotado nessa cor e tamanho.' };
+    if (ex) ex.qty++; else items.push({ id, ci, color, size, qty: 1 });
+    doneHTML = ''; save(); render(); return { ok: true };
   },
-  remove(idx) { items.splice(idx, 1); save(); emit(); },
-  total() { return items.reduce((s, i) => s + byId(i.id).price * i.qty, 0); },
+  setQty(idx, q) { if (q < 1) items.splice(idx, 1); else items[idx].qty = Math.min(q, 20); save(); render(); },
+  clear() { items = []; save(); render(); },
+  subtotal() { return items.reduce((s, i) => s + (find(i.id)?.finalPrice ?? 0) * i.qty, 0); },
   count() { return items.reduce((s, i) => s + i.qty, 0); },
-  on(fn) { listeners.add(fn); },
 };
-function emit() { listeners.forEach((f) => f()); render(); }
 
-function whatsappLink() {
-  const lines = items.map((i) => { const p = byId(i.id); return `• ${i.qty}x ${p.name} (${p.colors[i.ci].n}${i.size ? ', ' + i.size : ''}) ${brl(p.price * i.qty)}`; });
-  const msg = `Olá, VS Imports! Quero fechar este pedido:\n${lines.join('\n')}\nTotal: ${brl(bag.total())}`;
-  return `https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent(msg)}`;
+async function refreshEligibility() {
+  eligible = false;
+  if (hasSupabase && auth.user) { const { data } = await supabase.rpc('first_purchase_eligible'); eligible = !!data; }
+  render();
 }
 
 let el;
 function render() {
   document.querySelectorAll('[data-bag-count]').forEach((b) => (b.textContent = bag.count()));
   if (!el) return;
+  items = items.filter((i) => find(i.id) || !catalog.length);
   const list = el.querySelector('#bag-list');
-  list.innerHTML = items.length ? items.map((i, k) => {
-    const p = byId(i.id);
-    return `<li><img src="${img(p.id, i.ci ? 'card-' + i.ci : 'card')}" alt=""><div><b>${p.name}</b><span>${p.colors[i.ci].n}${i.size ? ' · ' + i.size : ''} · ${i.qty}x</span></div><div><span>${brl(p.price * i.qty)}</span><br><button data-rm="${k}">Remover</button></div></li>`;
-  }).join('') : '<li class="bag-empty">Sua sacola está vazia.</li>';
-  el.querySelector('#bag-total').textContent = brl(bag.total());
-  const w = el.querySelector('#bag-whats');
-  w.href = items.length ? whatsappLink() : '#';
-  w.toggleAttribute('aria-disabled', !items.length);
+  // agrupa a mesma peça (cores/tamanhos diferentes) sob um título
+  const groups = new Map();
+  items.forEach((i, k) => { if (!groups.has(i.id)) groups.set(i.id, []); groups.get(i.id).push([i, k]); });
+  list.innerHTML = items.length ? [...groups].map(([id, rows]) => {
+    const p = find(id); if (!p) return '';
+    const pic = p.photos?.[0] || img(p.id, rows[0][0].ci ? 'card-' + rows[0][0].ci : 'card');
+    return `<li class="bag-group"><img src="${pic}" alt=""><div class="bag-g">
+      <b>${p.name}</b><span class="bag-unit">${brl(p.finalPrice)} cada</span>
+      ${rows.map(([i, k]) => `<div class="bag-row"><span>${i.color || ''}${i.size ? ' · ' + i.size : ''}</span>
+        <span class="qty"><button type="button" data-q="${k}" data-d="-1" aria-label="Menos">−</button><b>${i.qty}</b><button type="button" data-q="${k}" data-d="1" aria-label="Mais">+</button></span>
+        <span>${brl(p.finalPrice * i.qty)}</span></div>`).join('')}
+    </div></li>`;
+  }).join('') : doneHTML || '<li class="bag-empty">Sua sacola está vazia.</li>';
+  const sub = bag.subtotal();
+  const disc = eligible ? Math.round(sub * 5) / 100 : 0;
+  el.querySelector('#bag-total').textContent = brl(sub - disc);
+  el.querySelector('#bag-sub').innerHTML = !items.length ? '' :
+    eligible ? `<span>Subtotal ${brl(sub)}</span><span class="gold">Primeira compra −5% (${brl(disc)})</span>`
+    : auth.user ? `<span>Subtotal ${brl(sub)}</span>` : `<span>Subtotal ${brl(sub)}</span><button class="link" type="button" data-login>Entre ou crie sua conta e ganhe 5% na 1ª compra</button>`;
+  const go = el.querySelector('#bag-go');
+  go.disabled = !items.length;
+  go.textContent = auth.user ? 'Finalizar pedido' : 'Entrar para finalizar';
 }
+
+async function checkout() {
+  const msg = el.querySelector('#bag-msg');
+  if (!hasSupabase) { msg.textContent = 'Finalização indisponível no momento.'; return; }
+  if (!auth.user) { openAuth('criar', { reason: 'Crie sua conta para finalizar e ganhe <b>5% de desconto</b> na primeira compra.', then: () => checkout() }); return; }
+  const go = el.querySelector('#bag-go'); go.disabled = true; msg.textContent = 'Criando seu pedido…';
+  const delivery = el.querySelector('[name=delivery]:checked')?.value || 'retirada';
+  const { data: o, error } = await supabase.rpc('place_order', {
+    items: items.map((i) => ({ id: i.id, qty: i.qty, color: i.color, size: i.size })), p_delivery: delivery,
+  });
+  go.disabled = false;
+  if (error) { msg.textContent = friendly(error); catalogReload(true); return; }
+  const lines = items.map((i) => `• ${i.qty}x ${find(i.id)?.name} (${[i.color, i.size].filter(Boolean).join(', ')})`);
+  const text = `Olá, VS Imports! Fiz o pedido #${o.number} pelo site:\n${lines.join('\n')}\nTotal: ${brl(+o.total)}${+o.discount ? ` (com ${brl(+o.discount)} de desconto)` : ''}\n${delivery === 'entrega' ? 'Quero receber em casa.' : 'Vou retirar na loja.'}`;
+  doneHTML = `<li class="bag-done"><b>Pedido #${o.number} criado!</b>
+    <p>Total ${brl(+o.total)}${+o.discount ? `, você economizou ${brl(+o.discount)}` : ''}. Agora é só combinar o pagamento com a gente.</p>
+    <a class="pill solid block" href="https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">Combinar pelo WhatsApp</a></li>`;
+  msg.textContent = '';
+  bag.clear(); refreshEligibility(); catalogReload(true);
+}
+
+async function catalogReload(fresh = false) { catalog = await loadCatalog({ fresh }); render(); }
 
 export function initBag({ onOpen, onClose } = {}) {
   el = document.getElementById('bag');
+  const foot = el.querySelector('.bag-panel > footer');
+  foot.innerHTML = `
+    <div class="bag-sub" id="bag-sub"></div>
+    <div class="bag-total"><span>Total</span><b id="bag-total">R$ 0,00</b></div>
+    <fieldset class="bag-del"><legend class="visually-hidden">Entrega</legend>
+      <label><input type="radio" name="delivery" value="retirada" checked> Retirar na loja</label>
+      <label><input type="radio" name="delivery" value="entrega"> Receber em casa</label>
+    </fieldset>
+    <button class="pill solid block" id="bag-go" type="button">Finalizar pedido</button>
+    <p class="small" id="bag-msg" role="status" aria-live="polite"></p>`;
   let lastFocus;
   const open = () => { lastFocus = document.activeElement; el.hidden = false; render(); onOpen?.(); el.querySelector('[data-bag-close]').focus(); };
   const close = () => { el.hidden = true; onClose?.(); lastFocus?.focus?.(); };
   document.querySelectorAll('[data-bag-open]').forEach((b) => b.addEventListener('click', open));
   el.addEventListener('click', (e) => {
     if (e.target === el || e.target.closest('[data-bag-close]')) close();
-    const rm = e.target.closest('[data-rm]'); if (rm) bag.remove(+rm.dataset.rm);
+    const q = e.target.closest('[data-q]');
+    if (q) { const k = +q.dataset.q, i = items[k]; if (+q.dataset.d > 0) { const p = find(i.id); const st = p ? variantStock(p, i.color, i.size) : null; if (st != null && i.qty + 1 > st) { el.querySelector('#bag-msg').textContent = `Só temos ${st} em estoque.`; return; } } bag.setQty(k, i.qty + +q.dataset.d); }
+    if (e.target.closest('#bag-go')) checkout();
   });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el.hidden) close(); });
-  render();
+  auth.on(() => refreshEligibility());
+  catalogReload();
   return { open, close };
 }

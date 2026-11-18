@@ -93,6 +93,18 @@ if (!only || only === 'loja') {
   snap('loja-geral', 1600, 1000, 'geral');
   snap('loja-estante', 1200, 1200, 'estante');
   snap('loja-logo', 1200, 1200, 'logo');
+  // capa: parede do logo em retrato, câmera um pouco mais baixa e próxima
+  host.style.width = '1500px'; host.style.height = '1900px'; store.resize();
+  const L = store.L;
+  store.flyTo([L.xr - 1.0, 1.45, L.logoZ + 2.0], [L.xl, 1.62, L.logoZ - 0.1], 0); store.renderOnce();
+  out.push({ name: 'capa-loja', data: store.renderer.domElement.toDataURL('image/webp', 0.9) });
+}
+// versões pequenas (480 px) dos cards, para celular e grade do catálogo
+for (const a of out.filter((o) => o.name.includes('-card')).slice()) {
+  const im = new Image(); im.src = a.data; await im.decode();
+  const c = document.createElement('canvas'); c.width = 480; c.height = Math.round(480 * im.height / im.width);
+  const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, c.width, c.height);
+  out.push({ name: a.name + '-sm', data: c.toDataURL('image/webp', 0.84) });
 }
 document.getElementById('s').textContent = 'Pronto: ' + out.length;
 window.__assets = out;

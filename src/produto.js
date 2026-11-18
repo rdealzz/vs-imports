@@ -1,72 +1,112 @@
-import { PRODUCTS, CATEGORIES, STORE, byId, brl, installments, img } from './data/products.js';
+import { CATEGORIES, STORE, brl, installments, img } from './data/products.js';
+import { loadCatalog, LOCAL_CATALOG, variantStock, colorAvailable, discountPct } from './data/catalog.js';
 import { initBag, bag } from './ui/bag.js';
-import { cardHTML } from './ui/card.js';
+import { initAuth } from './ui/auth.js';
+import { cardHTML, priceHTML } from './ui/card.js';
 import { renderFooter } from './ui/footer.js';
-renderFooter(undefined, { home: './' });
 
 const $ = (s) => document.querySelector(s);
 const qs = new URLSearchParams(location.search);
-const p = byId(qs.get('id')) || PRODUCTS[0];
-let ci = Math.min(+(qs.get('cor') || 0), p.colors.length - 1);
-let size = p.sizes.length === 1 ? p.sizes[0] : '';
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
-
+renderFooter(undefined, { home: './' });
+initAuth();
 initBag();
-document.title = `${p.name} | VS Imports`;
-const cat = CATEGORIES.find((c) => c.id === p.cat);
-$('#crumb').innerHTML = `<a href="./#catalogo">Catálogo</a> / ${cat.name}`;
-$('#name').textContent = p.name;
-$('#price').textContent = brl(p.price);
-$('#inst').textContent = installments(p.price);
-$('#desc').textContent = p.desc;
-if (qs.get('de') !== 'loja') $('#back').textContent = '← Ver na loja 3D';
 
-// cores
-const colors = $('#colors');
-colors.innerHTML = p.colors.map((c, i) => `<button type="button" style="background:${hex(c.c)}" aria-label="${c.n}" aria-pressed="${i === ci}" data-i="${i}"></button>`).join('');
-const setColor = (i) => {
-  ci = i;
-  colors.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.i === i)));
-  $('#color-name').textContent = p.colors[i].n;
-  viewer?.setProduct(p, i);
-  showView('3d');
-  updateWhats();
-  const u = new URL(location.href); u.searchParams.set('cor', i); history.replaceState(null, '', u);
-};
-colors.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setColor(+b.dataset.i); });
-$('#color-name').textContent = p.colors[ci].n;
+let catalog = LOCAL_CATALOG, p = null, ci = 0, size = '', viewer = null;
 
-// tamanhos
-const sizes = $('#sizes');
-sizes.innerHTML = p.sizes.map((s) => `<button type="button" aria-pressed="${s === size}">${s}</button>`).join('');
-sizes.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; size = b.textContent; sizes.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); $('#msg').textContent = ''; updateWhats(); });
+function render() {
+  p = catalog.find((x) => x.id === qs.get('id')) || catalog[0];
+  ci = Math.min(+(qs.get('cor') || 0), p.colors.length - 1);
+  // começa numa cor que tenha estoque
+  if (!colorAvailable(p, p.colors[ci].n)) { const k = p.colors.findIndex((c) => colorAvailable(p, c.n)); if (k >= 0) ci = k; }
+  size = p.sizes.length === 1 ? p.sizes[0] : '';
+  document.title = `${p.name} | VS Imports`;
+  const cat = CATEGORIES.find((c) => c.id === p.cat) || { name: p.cat };
+  $('#crumb').innerHTML = `<a href="./#catalogo">Catálogo</a> / ${cat.name}`;
+  $('#name').textContent = p.name;
+  const pct = discountPct(p);
+  $('#price').innerHTML = priceHTML(p) + (pct ? ` <span class="badge sale inline">-${pct}%</span>` : '');
+  $('#inst').textContent = installments(p.finalPrice) + (p.compareAt && p.promoUntil ? ` · promoção até ${new Date(p.promoUntil).toLocaleDateString('pt-BR')}` : '');
+  $('#desc').textContent = p.desc;
+  if (qs.get('de') !== 'loja') $('#back').textContent = '← Ver na loja 3D';
+  renderColors(); renderSizes(); renderThumbs(); updateBuy();
+}
 
-function updateWhats() {
-  const msg = `Olá, VS Imports! Tenho interesse em: ${p.name} (${p.colors[ci].n}${size ? ', tamanho ' + size : ''}) ${brl(p.price)}`;
+function renderColors() {
+  const colors = $('#colors');
+  colors.innerHTML = p.colors.map((c, i) => `<button type="button" style="background:${hex(c.c)}" aria-label="${c.n}${colorAvailable(p, c.n) ? '' : ' (esgotado)'}" aria-pressed="${i === ci}" data-i="${i}" class="${colorAvailable(p, c.n) ? '' : 'out'}"></button>`).join('');
+  $('#color-name').textContent = p.colors[ci].n + (colorAvailable(p, p.colors[ci].n) ? '' : ' · esgotado');
+}
+function renderSizes() {
+  const sizes = $('#sizes'), color = p.colors[ci].n;
+  sizes.innerHTML = p.sizes.map((s) => {
+    const st = variantStock(p, color, s);
+    const out = st === 0;
+    if (out && size === s) size = '';
+    return `<button type="button" aria-pressed="${s === size}" ${out ? 'disabled aria-label="' + s + ' esgotado"' : ''} data-s="${s}">${s}${st != null && st > 0 && st <= 2 ? `<small>últimas ${st}</small>` : ''}</button>`;
+  }).join('');
+}
+function renderThumbs() {
+  const thumbs = $('#thumbs');
+  const pics = p.photos?.length ? p.photos : (p.hasLocalImages !== false ? [img(p.id, 'mood')] : []);
+  thumbs.innerHTML = `<button type="button" data-v="3d" aria-pressed="true" aria-label="Modelo 3D"><img src="${p.photos?.[0] || img(p.id)}" alt=""><span class="tag3d">3D</span></button>` +
+    pics.map((src, k) => `<button type="button" data-v="${k}" aria-pressed="false" aria-label="Foto ${k + 1}"><img src="${src}" alt=""></button>`).join('');
+  thumbs.dataset.pics = JSON.stringify(pics);
+}
+function updateBuy() {
+  const color = p.colors[ci].n;
+  const anyAvail = p.sizes.some((s) => variantStock(p, color, s) !== 0);
+  const add = $('#add');
+  add.disabled = !p.available || !anyAvail;
+  add.textContent = !p.available ? 'Esgotado' : !anyAvail ? 'Esgotado nessa cor' : 'Adicionar à sacola';
+  const msg = `Olá, VS Imports! Tenho interesse em: ${p.name} (${color}${size ? ', tamanho ' + size : ''}) ${brl(p.finalPrice)}`;
   $('#whats').href = `https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent(msg)}`;
 }
-updateWhats();
+
+$('#colors').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  ci = +b.dataset.i; renderColors(); renderSizes(); updateBuy();
+  viewer?.setProduct(p, ci); showView('3d');
+  const u = new URL(location.href); u.searchParams.set('cor', ci); history.replaceState(null, '', u);
+});
+$('#sizes').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  size = b.dataset.s; $('#sizes').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); $('#msg').textContent = ''; updateBuy();
+});
 $('#add').addEventListener('click', () => {
-  if (!size) { $('#msg').textContent = 'Escolha um tamanho.'; sizes.querySelector('button')?.focus(); return; }
-  bag.add(p.id, ci, size);
-  $('#msg').textContent = `${p.name} na sacola.`;
+  if (!size) { $('#msg').textContent = 'Escolha um tamanho.'; $('#sizes').querySelector('button:not(:disabled)')?.focus(); return; }
+  const r = bag.add(p.id, ci, size);
+  $('#msg').textContent = r.ok ? `${p.name} na sacola.` : r.msg;
 });
 
-// 3D + fotos
-let viewer = null;
 const media = $('.pdp-media');
-const thumbs = $('#thumbs');
-thumbs.innerHTML = `<button type="button" data-v="3d" aria-pressed="true" aria-label="Modelo 3D"><img src="${img(p.id)}" alt=""></button><button type="button" data-v="mood" aria-pressed="false" aria-label="Foto"><img src="${img(p.id, 'mood')}" alt=""></button>`;
 function showView(v) {
-  thumbs.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  const thumbs = $('#thumbs');
+  thumbs.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === String(v))));
   let ph = media.querySelector('.pdp-photo');
-  if (v === 'mood') { if (!ph) { ph = document.createElement('div'); ph.className = 'pdp-photo'; ph.innerHTML = `<img src="${img(p.id, 'mood')}" alt="${p.name}">`; media.insertBefore(ph, $('.pdp-media-ui')); } }
-  else ph?.remove();
+  if (v !== '3d') {
+    const src = JSON.parse(thumbs.dataset.pics || '[]')[+v];
+    if (!ph) { ph = document.createElement('div'); ph.className = 'pdp-photo'; media.insertBefore(ph, $('.pdp-media-ui')); }
+    ph.innerHTML = `<img src="${src}" alt="${p.name}, foto ${+v + 1}" decoding="async">`;
+  } else ph?.remove();
 }
-thumbs.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) showView(b.dataset.v); });
+$('#thumbs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) showView(b.dataset.v); });
+
+function related() {
+  const rel = catalog.filter((x) => x.id !== p.id).sort((a, b) => (a.cat === p.cat) - (b.cat === p.cat)).slice(0, 4);
+  $('#related').innerHTML = rel.map(cardHTML).join('');
+}
+
+render(); related();
 import('./three/viewer.js').then(({ ProductViewer }) => { viewer = new ProductViewer($('#pdp-3d'), p, ci); })
   .catch(() => { $('#pdp-3d').innerHTML = `<img src="${img(p.id)}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover">`; });
-
-// relacionados: outras linhas primeiro
-const rel = PRODUCTS.filter((x) => x.id !== p.id).sort((a, b) => (a.cat === p.cat) - (b.cat === p.cat)).slice(0, 4);
-$('#related').innerHTML = rel.map(cardHTML).join('');
+// dados vivos do banco (preço, promoção, fotos, estoque)
+loadCatalog().then((list) => {
+  catalog = list;
+  const keep = size;
+  render(); related();
+  if (keep && p.sizes.includes(keep) && variantStock(p, p.colors[ci].n, keep) !== 0) { size = keep; renderSizes(); updateBuy(); }
+  viewer?.setProduct(p, ci);
+  // abre na primeira foto real, se houver
+  if (p.photos?.length) showView('0');
+});

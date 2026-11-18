@@ -1,0 +1,458 @@
+// Painel da loja: resumo financeiro, venda rápida (balcão, Instagram,
+// WhatsApp), pedidos, produtos com grade de estoque e fotos, despesas,
+// relatório mensal em PDF e ajustes. Toda regra de dinheiro e estoque roda
+// no banco (funções do Supabase); aqui é só a interface.
+import { supabase, hasSupabase, friendly } from './lib/supabase.js';
+import { initAuth, auth } from './ui/auth.js';
+import { loadCatalog, photoUrl } from './data/catalog.js';
+import { brl, img, CATEGORIES } from './data/products.js';
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const iso = (d) => { const z = new Date(d); z.setMinutes(z.getMinutes() - z.getTimezoneOffset()); return z.toISOString().slice(0, 10); };
+const br = (d) => new Date(d + (String(d).length === 10 ? 'T12:00' : '')).toLocaleDateString('pt-BR');
+const hex = (c) => '#' + Number(c).toString(16).padStart(6, '0');
+const CH = { site: 'Site', loja: 'Loja', instagram: 'Instagram', whatsapp: 'WhatsApp' };
+const PAY = { pix: 'Pix', credito: 'Crédito', debito: 'Débito', dinheiro: 'Dinheiro' };
+const PRESETS = { camisetas: ['P', 'M', 'G', 'GG', 'XG'], bermudas: ['38', '40', '42', '44', '46'], tenis: ['37', '38', '39', '40', '41', '42', '43', '44'], bones: ['Único'], acessorios: ['Único'] };
+
+function toast(msg, bad = false) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast' + (bad ? ' bad' : ''); t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 3800);
+}
+async function rpc(fn, args) { const { data, error } = await supabase.rpc(fn, args); if (error) throw error; return data; }
+
+let catalog = [], costs = new Map();
+async function reloadCatalog() {
+  catalog = await loadCatalog({ includeInactive: true });
+  if (auth.isOwner) {
+    const { data } = await supabase.from('product_costs').select('product_id, cost');
+    costs = new Map((data || []).map((c) => [c.product_id, +c.cost]));
+  }
+}
+const pic = (p) => p.photos?.[0] || (p.hasLocalImages !== false ? img(p.id, 'card-sm') : `${import.meta.env.BASE_URL}brand/vs-icon.svg`);
+
+/* ================================================================ acesso */
+initAuth();
+let started = false;
+auth.on(async (user, profile) => {
+  const gate = $('#gate'), app = $('#app');
+  if (!hasSupabase) { $('#gate-msg').textContent = 'Banco de dados não configurado.'; return; }
+  if (!user) { gate.hidden = false; app.hidden = true; $('#gate-msg').textContent = 'Entre com a conta da loja para continuar.'; return; }
+  if (!profile) return;
+  if (!auth.isStaff) {
+    gate.hidden = false; app.hidden = true;
+    $('#gate-msg').innerHTML = `Sua conta (${esc(user.email)}) ainda não tem acesso ao painel. Peça para o dono liberar em Ajustes → Equipe.`;
+    gate.querySelector('[data-login]').hidden = true;
+    return;
+  }
+  gate.hidden = true; app.hidden = false;
+  $$('[data-owner]').forEach((n) => (n.hidden = !auth.isOwner));
+  $('#me').innerHTML = `<b>${esc(profile.full_name || user.email)}</b><span>${profile.role === 'dono' ? 'Dono' : 'Vendedor'}</span><button class="link" data-logout>Sair</button>`;
+  if (!started) { started = true; await reloadCatalog(); go(location.hash.slice(1) || 'resumo'); }
+});
+
+/* ============================================================ navegação */
+const VIEWS = { resumo: loadResumo, vender: loadPdv, pedidos: loadOrders, produtos: loadProducts, despesas: loadExpenses, relatorio: loadReport, ajustes: loadSettings };
+function go(v) {
+  if (!VIEWS[v] || ($(`[data-go="${v}"]`)?.hasAttribute('data-owner') && !auth.isOwner)) v = 'resumo';
+  $$('.view').forEach((s) => (s.hidden = s.id !== 'v-' + v));
+  $$('[data-go]').forEach((b) => (b.getAttribute('data-go') === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
+  history.replaceState(null, '', '#' + v);
+  scrollTo(0, 0);
+  VIEWS[v]().catch((e) => toast(friendly(e), true));
+}
+$('#nav').addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
+
+/* =============================================================== resumo */
+let rPeriod = 'hoje';
+$('#r-period').addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (!b) return; rPeriod = b.dataset.p; $$('#r-period button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); loadResumo(); });
+async function periodRange(kind, offset = 0) {
+  if (kind === 'hoje') { const t = iso(new Date()); return { from: t, to: t, label: 'Hoje, ' + br(t) }; }
+  const [p] = await rpc('commercial_period', { p_offset: kind === 'anterior' ? -1 : offset });
+  return { from: p.period_start, to: p.period_end, label: `${br(p.period_start)} a ${br(p.period_end)}` };
+}
+async function loadResumo() {
+  const r = await periodRange(rPeriod);
+  $('#r-label').textContent = r.label;
+  const kpi = (label, value, sub = '', cls = '') => `<div class="kpi ${cls}"><span>${label}</span><b>${value}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
+  if (auth.isOwner) {
+    const [[s], daily, top] = await Promise.all([
+      rpc('finance_summary', { p_from: r.from, p_to: r.to }), rpc('finance_daily', { p_from: r.from, p_to: r.to }), rpc('top_products', { p_from: r.from, p_to: r.to, p_limit: 8 }),
+    ]);
+    $('#kpis').innerHTML = kpi('Faturamento', brl(+s.revenue), `${s.orders} vendas · ${s.items_sold} peças`, 'gold')
+      + kpi('Lucro líquido', brl(+s.net_profit), 'faturamento − custo − despesas', +s.net_profit < 0 ? 'neg' : 'pos')
+      + kpi('Lucro bruto', brl(+s.gross_profit), `margem ${(+s.gross_margin).toLocaleString('pt-BR')}%`)
+      + kpi('Custo das peças', brl(+s.cogs))
+      + kpi('Despesas', brl(+s.expenses))
+      + kpi('Ticket médio', brl(+s.ticket))
+      + kpi('Site / Loja e redes', `${brl(+s.site_revenue)} / ${brl(+s.store_revenue)}`)
+      + kpi('Pedidos pendentes', s.pending_orders, 'aguardando pagamento', +s.pending_orders ? 'warn' : '');
+    const max = Math.max(1, ...daily.map((d) => +d.revenue));
+    $('#chart').innerHTML = daily.length > 1 ? daily.map((d) => `<div class="bar" title="${br(d.day)}: ${brl(+d.revenue)} · lucro ${brl(+d.net_profit)}"><i style="height:${(+d.revenue / max) * 100}%"></i><em style="height:${Math.max(0, +d.net_profit) / max * 100}%"></em><span>${new Date(d.day + 'T12:00').getDate()}</span></div>`).join('')
+      : `<p class="muted big">${brl(+s.revenue)} hoje</p>`;
+    $('#top').innerHTML = top.length ? top.map((t) => `<li><span>${esc(t.name)}</span><b>${t.qty} un.</b><small>${brl(+t.revenue)} · lucro ${brl(+t.profit)}</small></li>`).join('') : '<li class="muted">Sem vendas no período.</li>';
+  } else {
+    const { data } = await supabase.from('orders').select('total, status, channel').gte('created_at', r.from + 'T00:00:00-03:00').lte('created_at', r.to + 'T23:59:59-03:00');
+    const ok = (data || []).filter((o) => o.status !== 'cancelado');
+    $('#kpis').innerHTML = kpi('Vendas', ok.length, '', 'gold') + kpi('Total vendido', brl(ok.reduce((s, o) => s + +o.total, 0)));
+    $('#chart').innerHTML = ''; $('#top').innerHTML = '';
+  }
+  const low = [];
+  catalog.forEach((p) => p.variants.forEach((v) => { if (v.stock <= 2) low.push({ p, v }); }));
+  $('#low').innerHTML = low.length ? low.sort((a, b) => a.v.stock - b.v.stock).slice(0, 30).map(({ p, v }) => `<li class="${v.stock ? '' : 'zero'}"><img src="${pic(p)}" alt=""><span>${esc(p.name)} <small>${esc([v.color, v.size].filter(Boolean).join(' · '))}</small></span><b>${v.stock ? v.stock + ' un.' : 'esgotado'}</b></li>`).join('') : '<li class="muted">Tudo com estoque.</li>';
+}
+
+/* ============================================================ vender */
+let cart = [];
+const segVal = (id) => $(`#${id} [aria-pressed="true"]`).dataset.v;
+$$('.seg.wide').forEach((g) => g.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; $$('button', g).forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }));
+function vStock(p, color, size) {
+  if (!p.variants.length) return p.stock == null ? 99 : p.stock;
+  return p.variants.find((v) => v.color === color && v.size === size)?.stock ?? 0;
+}
+async function loadPdv() { renderPdvGrid(); renderCart(); $('#pdv-disc').max = auth.isOwner ? 30 : 10; }
+function renderPdvGrid() {
+  const q = $('#pdv-q').value.trim().toLowerCase();
+  const list = catalog.filter((p) => p.active && (!q || p.name.toLowerCase().includes(q) || p.id.includes(q)));
+  $('#pdv-grid').innerHTML = list.map((p) => `<li><button type="button" class="pdv-item" data-p="${p.id}">
+      <img src="${pic(p)}" alt="" loading="lazy"><b>${esc(p.name)}</b><span>${brl(p.finalPrice)}${p.compareAt ? ' <s>' + brl(p.compareAt) + '</s>' : ''}</span>
+      <small>${p.stock == null ? 'estoque livre' : p.stock + ' em estoque'}</small></button>
+      <div class="pdv-opts" hidden></div></li>`).join('') || '<li class="muted">Nada encontrado.</li>';
+}
+$('#pdv-q').addEventListener('input', renderPdvGrid);
+$('#pdv-grid').addEventListener('click', (e) => {
+  const item = e.target.closest('.pdv-item');
+  if (item) {
+    const box = item.nextElementSibling, p = catalog.find((x) => x.id === item.dataset.p);
+    $$('.pdv-opts').forEach((o) => o !== box && (o.hidden = true));
+    box.hidden = !box.hidden;
+    if (!box.hidden) box.innerHTML = p.colors.map((c) => `<div class="opt-row"><span class="dot" style="background:${hex(c.c)}"></span><b>${esc(c.n)}</b>
+      <div class="opt-sizes">${p.sizes.map((s) => { const st = vStock(p, c.n, s); return `<button type="button" data-add="${p.id}" data-c="${esc(c.n)}" data-s="${esc(s)}" ${st ? '' : 'disabled'}>${esc(s)}<small>${st >= 99 ? '' : st}</small></button>`; }).join('')}</div></div>`).join('');
+    return;
+  }
+  const add = e.target.closest('[data-add]');
+  if (add) {
+    const p = catalog.find((x) => x.id === add.dataset.add), color = add.dataset.c, size = add.dataset.s;
+    const ex = cart.find((i) => i.id === p.id && i.color === color && i.size === size);
+    const st = vStock(p, color, size), cur = ex ? ex.qty : 0;
+    if (cur + 1 > st) { toast(`Só tem ${st} em estoque.`, true); return; }
+    if (ex) ex.qty++; else cart.push({ id: p.id, name: p.name, color, size, qty: 1, price: p.finalPrice });
+    renderCart(); toast(`${p.name} ${color} ${size} adicionado`);
+  }
+});
+function renderCart() {
+  // agrupa a mesma peça com cores/tamanhos diferentes
+  const groups = new Map();
+  cart.forEach((i, k) => { if (!groups.has(i.id)) groups.set(i.id, []); groups.get(i.id).push([i, k]); });
+  $('#cart').innerHTML = cart.length ? [...groups].map(([, rows]) => `<li><b>${esc(rows[0][0].name)}</b>${rows.map(([i, k]) => `<div class="cart-row">
+      <span>${esc([i.color, i.size].filter(Boolean).join(' · '))}</span>
+      <span class="qty"><button type="button" data-cq="${k}" data-d="-1">−</button><b>${i.qty}</b><button type="button" data-cq="${k}" data-d="1">+</button></span>
+      <span>${brl(i.price * i.qty)}</span></div>`).join('')}</li>`).join('') : '<li class="muted">Toque numa peça para escolher cor e tamanho.</li>';
+  const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const pct = Math.max(0, Math.min(+$('#pdv-disc').value || 0, auth.isOwner ? 30 : 10));
+  const disc = Math.round(sub * pct) / 100;
+  $('#pdv-totals').innerHTML = `<div><span>Subtotal</span><b>${brl(sub)}</b></div>${disc ? `<div><span>Desconto ${pct}%</span><b>− ${brl(disc)}</b></div>` : ''}<div class="g"><span>Total</span><b>${brl(sub - disc)}</b></div>`;
+  $('#pdv-go').disabled = !cart.length;
+}
+$('#pdv-disc').addEventListener('input', renderCart);
+$('#cart').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-cq]'); if (!b) return;
+  const i = cart[+b.dataset.cq], d = +b.dataset.d, p = catalog.find((x) => x.id === i.id);
+  if (d > 0 && i.qty + 1 > vStock(p, i.color, i.size)) { toast('Sem mais estoque dessa variante.', true); return; }
+  i.qty += d; if (i.qty < 1) cart.splice(+b.dataset.cq, 1); renderCart();
+});
+$('#pdv-go').addEventListener('click', async () => {
+  const btn = $('#pdv-go'); btn.disabled = true; $('#pdv-msg').textContent = 'Registrando…';
+  try {
+    const o = await rpc('register_store_sale', {
+      items: cart.map((i) => ({ id: i.id, qty: i.qty, color: i.color, size: i.size })),
+      p_payment: segVal('pdv-pay'), p_channel: segVal('pdv-channel'),
+      p_customer_name: $('#pdv-name').value.trim() || null, p_customer_phone: $('#pdv-phone').value.trim() || null,
+      p_discount_percent: +$('#pdv-disc').value || 0, p_delivery: $('#pdv-del').value,
+    });
+    toast(`Venda #${o.number} registrada: ${brl(+o.total)}`);
+    $('#pdv-msg').textContent = `Venda #${o.number} · ${brl(+o.total)} · estoque atualizado.`;
+    cart = []; $('#pdv-name').value = ''; $('#pdv-phone').value = ''; $('#pdv-disc').value = 0;
+    await reloadCatalog(); renderPdvGrid(); renderCart();
+  } catch (err) { $('#pdv-msg').textContent = friendly(err); toast(friendly(err), true); await reloadCatalog(); renderPdvGrid(); }
+  finally { btn.disabled = !cart.length; }
+});
+
+/* ============================================================ pedidos */
+$('#o-status').addEventListener('change', loadOrders); $('#o-channel').addEventListener('change', loadOrders);
+async function loadOrders() {
+  let q = supabase.from('orders').select('id, number, created_at, channel, payment, status, subtotal, discount, total, coupon_code, customer_name, customer_phone, delivery, user_id, order_items(name, color, size, qty, unit_price)').order('created_at', { ascending: false }).limit(150);
+  if ($('#o-status').value) q = q.eq('status', $('#o-status').value);
+  if ($('#o-channel').value) q = q.eq('channel', $('#o-channel').value);
+  const { data, error } = await q; if (error) throw error;
+  const ids = [...new Set(data.map((o) => o.user_id).filter(Boolean))];
+  const people = new Map();
+  if (ids.length) { const { data: ps } = await supabase.from('profiles').select('id, full_name, phone, email').in('id', ids); (ps || []).forEach((p) => people.set(p.id, p)); }
+  $('#orders').innerHTML = data.length ? data.map((o) => {
+    const who = people.get(o.user_id);
+    const name = o.customer_name || who?.full_name || who?.email || 'Cliente no balcão';
+    const phone = o.customer_phone || who?.phone || '';
+    return `<li class="order"><div class="o-top"><b>#${o.number}</b><span class="chip-s">${CH[o.channel]}</span><span class="st st-${o.status}">${o.status}</span><span class="o-date">${new Date(o.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span><b class="o-total">${brl(+o.total)}</b></div>
+      <div class="o-mid"><span>${esc(name)}${phone ? ` · <a href="https://wa.me/55${esc(phone.replace(/\D/g, '').replace(/^55/, ''))}" target="_blank" rel="noopener">${esc(phone)}</a>` : ''}</span><span>${o.payment ? PAY[o.payment] : 'pagamento a combinar'} · ${o.delivery === 'entrega' ? 'entrega' : 'retirada'}${+o.discount ? ` · desconto ${brl(+o.discount)}${o.coupon_code ? ' (' + o.coupon_code + ')' : ''}` : ''}</span></div>
+      <p class="o-items">${o.order_items.map((i) => `${i.qty}x ${esc(i.name)} <small>${esc([i.color, i.size].filter(Boolean).join(' '))}</small>`).join(' · ')}</p>
+      ${o.status === 'cancelado' ? '' : `<div class="o-act"><select data-st="${o.id}">${['pendente', 'pago', 'separado', 'entregue'].map((s) => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}</select><button class="pill sm danger" data-cancel="${o.id}" data-n="${o.number}">Cancelar e devolver estoque</button></div>`}</li>`;
+  }).join('') : '<li class="muted">Nenhum pedido.</li>';
+}
+$('#orders').addEventListener('change', async (e) => {
+  const s = e.target.closest('[data-st]'); if (!s) return;
+  const { error } = await supabase.from('orders').update({ status: s.value }).eq('id', s.dataset.st);
+  toast(error ? friendly(error) : 'Status atualizado', !!error); loadOrders();
+});
+$('#orders').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-cancel]'); if (!b) return;
+  if (!confirm(`Cancelar o pedido #${b.dataset.n}? As peças voltam para o estoque.`)) return;
+  try { await rpc('cancel_order', { p_order: b.dataset.cancel }); toast('Pedido cancelado, estoque devolvido'); await reloadCatalog(); loadOrders(); } catch (err) { toast(friendly(err), true); }
+});
+
+/* ============================================================ produtos */
+$('#p-q').addEventListener('input', loadProducts);
+async function loadProducts() {
+  const q = $('#p-q').value.trim().toLowerCase();
+  const list = catalog.filter((p) => !q || p.name.toLowerCase().includes(q) || p.id.includes(q));
+  const own = auth.isOwner;
+  $('#p-table').innerHTML = `<thead><tr><th></th><th>Peça</th><th>Preço</th>${own ? '<th>Custo</th><th>Margem</th>' : ''}<th>Estoque</th><th>Situação</th>${own ? '<th></th>' : ''}</tr></thead><tbody>` +
+    list.map((p) => {
+      const c = costs.get(p.id), m = c != null && p.finalPrice ? (p.finalPrice - c) / p.finalPrice * 100 : null;
+      const stockTxt = p.stock == null ? '—' : `${p.stock}<small>${p.variants.length ? p.variants.filter((v) => v.stock > 0).length + '/' + p.variants.length + ' variantes' : ''}</small>`;
+      const sit = !p.active ? '<span class="st st-cancelado">fora do site</span>' : !p.available ? '<span class="st st-pendente">esgotado</span>' : p.compareAt ? '<span class="st st-separado">promoção</span>' : '<span class="st st-pago">à venda</span>';
+      return `<tr><td><img src="${pic(p)}" alt="" loading="lazy"></td><td><b>${esc(p.name)}</b><small>${p.id}</small></td>
+        <td>${p.compareAt ? `<s>${brl(p.compareAt)}</s><br>` : ''}${brl(p.finalPrice)}</td>
+        ${own ? `<td>${c != null ? brl(c) : '—'}</td><td>${m != null ? `<b class="${m < 30 ? 'neg' : 'pos'}">${m.toFixed(0)}%</b><small>${brl(p.finalPrice - c)} por peça</small>` : '—'}</td>` : ''}
+        <td>${stockTxt}</td><td>${sit}</td>${own ? `<td><button class="pill sm" data-edit="${p.id}">Editar</button></td>` : ''}</tr>`;
+    }).join('') + '</tbody>';
+}
+$('#p-table').addEventListener('click', (e) => { const b = e.target.closest('[data-edit]'); if (b) openForm(b.dataset.edit); });
+$('#p-new').addEventListener('click', () => openForm(null));
+
+/* ------- formulário de peça ------- */
+const pf = $('#pf');
+let form = null; // { isNew, colors:[{n,c,a}], sizes:[], qty: Map 'cor|tam' -> n, photos:[{path?, url, blob?}] , removed:[] }
+const slug = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+async function openForm(id) {
+  const p = id ? catalog.find((x) => x.id === id) : null;
+  form = { isNew: !p, colors: p ? p.colors.map((c) => ({ n: c.n, c: hex(c.c), a: hex(c.a) })) : [{ n: 'Preto', c: '#28282b', a: '#f1ede4' }],
+    sizes: p ? [...p.sizes] : [...PRESETS.camisetas.slice(0, 4)], qty: new Map(), photos: [], removed: [] };
+  if (p) p.variants.forEach((v) => form.qty.set(v.color + '|' + v.size, v.stock));
+  if (p) {
+    const { data } = await supabase.from('product_images').select('path, position').eq('product_id', p.id).order('position');
+    form.photos = (data || []).map((i) => ({ path: i.path, url: photoUrl(i.path) }));
+  }
+  pf.reset();
+  $('#pf-title').textContent = p ? 'Editar peça' : 'Nova peça';
+  pf.id.value = p?.id || ''; pf.id.readOnly = !!p; pf.name.value = p?.name || '';
+  pf.category.value = p?.cat || 'camisetas'; pf.model.value = p?.model || 'tee'; pf.description.value = p?.desc || '';
+  pf.price.value = p ? p.price : ''; pf.cost.value = p && costs.has(p.id) ? costs.get(p.id) : '';
+  pf.promo_price.value = p?.compareAt ? p.finalPrice : '';
+  pf.promo_until.value = p?.promoUntil ? iso(p.promoUntil) : '';
+  pf.featured.checked = !!p?.featured; pf.active.checked = p ? p.active !== false : true;
+  $('#pf-msg').textContent = '';
+  renderForm(); $('#sheet').hidden = false; pf.name.focus();
+}
+function renderForm() {
+  $('#pf-colors').innerHTML = form.colors.map((c, k) => `<li><input type="color" value="${c.c}" data-cc="${k}" aria-label="Cor"><input value="${esc(c.n)}" data-cn="${k}" placeholder="Nome da cor" maxlength="30"><button class="round" type="button" data-cx="${k}" aria-label="Remover cor">×</button></li>`).join('');
+  const preset = PRESETS[pf.category.value] || [];
+  const all = [...new Set([...preset, ...form.sizes])];
+  $('#pf-sizes').innerHTML = all.map((s) => `<button type="button" data-sz="${esc(s)}" aria-pressed="${form.sizes.includes(s)}">${esc(s)}</button>`).join('');
+  const sizes = all.filter((s) => form.sizes.includes(s));
+  form.sizes = sizes;
+  $('#pf-grid').innerHTML = form.colors.length && sizes.length ? `<thead><tr><th>Cor \\ Tam.</th>${sizes.map((s) => `<th>${esc(s)}</th>`).join('')}<th>Total</th></tr></thead><tbody>` +
+    form.colors.map((c) => `<tr><th><span class="dot" style="background:${c.c}"></span>${esc(c.n)}</th>${sizes.map((s) => `<td><input type="number" inputmode="numeric" min="0" max="9999" value="${form.qty.get(c.n + '|' + s) ?? 0}" data-q="${esc(c.n)}|${esc(s)}" aria-label="${esc(c.n)} ${esc(s)}"></td>`).join('')}<td class="sum"></td></tr>`).join('') + '</tbody>' : '<tbody><tr><td class="muted">Adicione cor e tamanho.</td></tr></tbody>';
+  $('#pf-photos').innerHTML = form.photos.map((f, k) => `<li><img src="${f.url}" alt=""><div><button type="button" class="round" data-pl="${k}" aria-label="Mover para a esquerda">‹</button><button type="button" class="round" data-px="${k}" aria-label="Remover">×</button><button type="button" class="round" data-pr="${k}" aria-label="Mover para a direita">›</button></div>${k === 0 ? '<span class="cover">capa</span>' : ''}</li>`).join('');
+  $('.file').hidden = form.photos.length >= 5;
+  sums(); margin();
+}
+function sums() {
+  let total = 0;
+  $$('#pf-grid tbody tr').forEach((tr) => { const t = $$('input', tr).reduce((s, i) => s + (+i.value || 0), 0); total += t; const c = $('.sum', tr); if (c) c.textContent = t; });
+  $('#pf-total').textContent = `Total em estoque: ${total} peça${total === 1 ? '' : 's'}`;
+}
+function margin() {
+  const cost = +pf.cost.value, price = +pf.promo_price.value || +pf.price.value;
+  $('#pf-margin').innerHTML = cost && price ? `Você ganha <b>${brl(price - cost)}</b> por peça · margem <b class="${(price - cost) / price < 0.3 ? 'neg' : 'pos'}">${((price - cost) / price * 100).toFixed(0)}%</b>${+pf.promo_price.value ? ' (no preço promocional)' : ''}` : '';
+}
+pf.addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.name === 'name' && form.isNew) pf.id.value = slug(t.value);
+  if (t.matches('[data-q]')) { form.qty.set(t.dataset.q, Math.max(0, +t.value || 0)); sums(); }
+  if (t.matches('[data-cn]')) { const k = +t.dataset.cn, old = form.colors[k].n; form.colors[k].n = t.value.trim(); form.sizes.forEach((s) => { if (form.qty.has(old + '|' + s)) { form.qty.set(t.value.trim() + '|' + s, form.qty.get(old + '|' + s)); form.qty.delete(old + '|' + s); } }); }
+  if (t.matches('[data-cc]')) form.colors[+t.dataset.cc].c = t.value;
+  if (['cost', 'price', 'promo_price'].includes(t.name)) margin();
+});
+pf.addEventListener('change', (e) => { if (e.target.matches('[data-cn]')) renderForm(); if (e.target.name === 'category') renderForm(); });
+pf.addEventListener('click', (e) => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.matches('[data-close]')) { $('#sheet').hidden = true; return; }
+  if (t.id === 'pf-addcolor') { form.colors.push({ n: 'Nova cor ' + (form.colors.length + 1), c: '#888888', a: '#f1ede4' }); renderForm(); }
+  if (t.dataset.cx != null) { form.colors.splice(+t.dataset.cx, 1); renderForm(); }
+  if (t.dataset.sz != null) { const s = t.dataset.sz; form.sizes = form.sizes.includes(s) ? form.sizes.filter((x) => x !== s) : [...form.sizes, s]; renderForm(); }
+  if (t.id === 'pf-addsize') { const v = $('#pf-size-new').value.trim().toUpperCase(); if (v && !form.sizes.includes(v)) { form.sizes.push(v); $('#pf-size-new').value = ''; renderForm(); } }
+  const mv = (k, d) => { const n = k + d; if (n < 0 || n >= form.photos.length) return; [form.photos[k], form.photos[n]] = [form.photos[n], form.photos[k]]; renderForm(); };
+  if (t.dataset.pl != null) mv(+t.dataset.pl, -1);
+  if (t.dataset.pr != null) mv(+t.dataset.pr, 1);
+  if (t.dataset.px != null) { const [f] = form.photos.splice(+t.dataset.px, 1); if (f.path) form.removed.push(f.path); renderForm(); }
+});
+$('#sheet').addEventListener('click', (e) => { if (e.target.id === 'sheet') $('#sheet').hidden = true; });
+
+// fotos do iPhone: reduz para 2000 px no lado maior e comprime (WebP, ou JPEG no Safari antigo)
+async function shrink(file) {
+  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => null);
+  if (!bmp) throw new Error('Não consegui abrir essa foto. No iPhone, use Ajustes → Câmera → Formatos → "Mais compatível", ou envie em JPG.');
+  const k = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(bmp, 0, 0, c.width, c.height);
+  let blob = await new Promise((r) => c.toBlob(r, 'image/webp', 0.86));
+  if (!blob || blob.type !== 'image/webp') blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.88));
+  return blob;
+}
+$('#pf-file').addEventListener('change', async (e) => {
+  const files = [...e.target.files].slice(0, 5 - form.photos.length);
+  $('#pf-msg').textContent = 'Preparando fotos…';
+  for (const f of files) {
+    try { const blob = await shrink(f); form.photos.push({ blob, url: URL.createObjectURL(blob) }); }
+    catch (err) { toast(err.message, true); }
+  }
+  e.target.value = ''; $('#pf-msg').textContent = ''; renderForm();
+});
+
+pf.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = $('#pf-msg'), btn = $('#pf-save');
+  const id = pf.id.value.trim();
+  if (!pf.name.value.trim()) { msg.textContent = 'Dê um nome para a peça.'; pf.name.focus(); return; }
+  if (!/^[a-z0-9-]{3,60}$/.test(id)) { msg.textContent = 'Código inválido: use letras minúsculas, números e hífen.'; pf.id.focus(); return; }
+  if (!(+pf.price.value >= 0) || pf.price.value === '') { msg.textContent = 'Informe o preço de venda.'; pf.price.focus(); return; }
+  if (pf.promo_price.value && +pf.promo_price.value >= +pf.price.value) { msg.textContent = 'O preço promocional precisa ser menor que o preço normal.'; pf.promo_price.focus(); return; }
+  if (!form.colors.length || !form.sizes.length) { msg.textContent = 'Adicione ao menos uma cor e um tamanho.'; return; }
+  if (new Set(form.colors.map((c) => c.n.toLowerCase())).size !== form.colors.length) { msg.textContent = 'Há cores com o mesmo nome.'; return; }
+  btn.disabled = true; msg.textContent = 'Salvando…';
+  try {
+    const stock = [];
+    form.colors.forEach((c) => form.sizes.forEach((s) => stock.push({ color: c.n, size: s, qty: form.qty.get(c.n + '|' + s) ?? 0 })));
+    await rpc('upsert_product', { p: {
+      id, name: pf.name.value.trim(), category: pf.category.value, model: pf.model.value, description: pf.description.value.trim(),
+      price: +pf.price.value, cost: pf.cost.value === '' ? null : +pf.cost.value,
+      promo_price: pf.promo_price.value === '' ? null : +pf.promo_price.value,
+      promo_until: pf.promo_until.value ? pf.promo_until.value + 'T23:59:59-03:00' : null,
+      featured: pf.featured.checked, active: pf.active.checked,
+      sizes: form.sizes, colors: form.colors.map((c) => ({ n: c.n, c: c.c, a: c.a })), stock,
+    } });
+    // fotos: envia as novas, regrava a ordem e apaga as removidas
+    msg.textContent = 'Enviando fotos…';
+    const paths = [];
+    for (const [k, f] of form.photos.entries()) {
+      if (f.path) { paths.push(f.path); continue; }
+      const ext = f.blob.type === 'image/webp' ? 'webp' : 'jpg';
+      const path = `${id}/${Date.now()}-${k}.${ext}`;
+      const { error } = await supabase.storage.from('produtos').upload(path, f.blob, { contentType: f.blob.type, cacheControl: '31536000' });
+      if (error) throw error;
+      paths.push(path);
+    }
+    await supabase.from('product_images').delete().eq('product_id', id);
+    if (paths.length) { const { error } = await supabase.from('product_images').insert(paths.map((path, position) => ({ product_id: id, path, position }))); if (error) throw error; }
+    if (form.removed.length) await supabase.storage.from('produtos').remove(form.removed);
+    $('#sheet').hidden = true; toast('Peça salva');
+    await reloadCatalog(); loadProducts();
+  } catch (err) { msg.textContent = friendly(err); }
+  finally { btn.disabled = false; }
+});
+
+/* ============================================================ despesas */
+const CAT = { aluguel: 'Aluguel', energia: 'Energia', agua: 'Água', internet: 'Internet', salarios: 'Salários', impostos: 'Impostos', marketing: 'Marketing', manutencao: 'Manutenção', taxas: 'Taxas', outros: 'Outros' };
+async function loadExpenses() {
+  const f = $('#exp-form'); if (!f.spent_on.value) f.spent_on.value = iso(new Date());
+  const r = await periodRange('mes');
+  const { data, error } = await supabase.from('expenses').select('*').gte('spent_on', r.from).lte('spent_on', r.to).order('spent_on', { ascending: false });
+  if (error) throw error;
+  const total = data.reduce((s, x) => s + +x.amount, 0);
+  $('#exp-label').innerHTML = `Mês comercial ${r.label} · <b>${brl(total)}</b> em despesas`;
+  $('#exp-list').innerHTML = data.length ? data.map((x) => `<li><span class="d">${br(x.spent_on)}</span><span class="chip-s">${CAT[x.category]}</span><span class="grow">${esc(x.description || '')}</span><b>${brl(+x.amount)}</b><button class="round" data-del="${x.id}" aria-label="Apagar">×</button></li>`).join('') : '<li class="muted">Nenhuma despesa neste mês.</li>';
+}
+$('#exp-form').addEventListener('submit', async (e) => {
+  e.preventDefault(); const f = e.target;
+  const { error } = await supabase.from('expenses').insert({ spent_on: f.spent_on.value, category: f.category.value, description: f.description.value.trim() || null, amount: +f.amount.value, created_by: auth.user.id });
+  if (error) { toast(friendly(error), true); return; }
+  f.description.value = ''; f.amount.value = ''; toast('Despesa lançada'); loadExpenses();
+});
+$('#exp-list').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-del]'); if (!b || !confirm('Apagar esta despesa?')) return;
+  const { error } = await supabase.from('expenses').delete().eq('id', b.dataset.del); toast(error ? friendly(error) : 'Despesa apagada', !!error); loadExpenses();
+});
+
+/* ============================================================ relatório */
+let repOffset = 0, rep = null;
+$('#rep-prev').addEventListener('click', () => { repOffset--; loadReport(); });
+$('#rep-next').addEventListener('click', () => { repOffset++; loadReport(); });
+async function loadReport() {
+  const [p] = await rpc('commercial_period', { p_offset: repOffset });
+  const from = p.period_start, to = p.period_end;
+  const [[s], rows, top, { data: closings }] = await Promise.all([
+    rpc('finance_summary', { p_from: from, p_to: to }), rpc('sales_report', { p_from: from, p_to: to }), rpc('top_products', { p_from: from, p_to: to, p_limit: 10 }),
+    supabase.from('month_closings').select('*').eq('period_start', from).eq('period_end', to).maybeSingle(),
+  ]);
+  rep = { from, to, s, rows, top, closing: closings };
+  $('#rep-label').textContent = `${br(from)} a ${br(to)}`;
+  $('#report').innerHTML = reportHTML(rep);
+}
+function reportHTML({ from, to, s, rows, top, closing }) {
+  const line = (k, v, cls = '') => `<div class="${cls}"><span>${k}</span><b>${v}</b></div>`;
+  return `<div class="rep-sum">
+      ${line('Faturamento', brl(+s.revenue), 'gold')}${line('Custo das peças', '− ' + brl(+s.cogs))}${line('Lucro bruto', brl(+s.gross_profit) + ` (${(+s.gross_margin).toLocaleString('pt-BR')}%)`)}
+      ${line('Despesas', '− ' + brl(+s.expenses))}${line('Lucro líquido', brl(+s.net_profit), +s.net_profit < 0 ? 'neg big' : 'pos big')}
+      ${line('Vendas', `${s.orders} pedidos · ${s.items_sold} peças`)}${line('Ticket médio', brl(+s.ticket))}${line('Descontos dados', brl(+s.discounts))}
+      ${line('Site', brl(+s.site_revenue))}${line('Loja, Instagram e WhatsApp', brl(+s.store_revenue))}
+    </div>
+    ${closing ? `<p class="closed">Mês fechado em ${new Date(closing.closed_at).toLocaleString('pt-BR')}</p>` : ''}
+    <h2>Mais vendidos</h2>
+    <table class="tbl small"><thead><tr><th>Peça</th><th>Qtd.</th><th>Vendido</th><th>Lucro</th></tr></thead><tbody>${top.map((t) => `<tr><td>${esc(t.name)}</td><td>${t.qty}</td><td>${brl(+t.revenue)}</td><td>${brl(+t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sem vendas.</td></tr>'}</tbody></table>
+    <h2>Todas as vendas (${rows.length})</h2>
+    <table class="tbl small"><thead><tr><th>#</th><th>Data</th><th>Canal</th><th>Cliente</th><th>Itens</th><th>Pagto.</th><th>Desc.</th><th>Total</th><th>Lucro</th></tr></thead><tbody>
+    ${rows.map((r) => `<tr class="${r.status === 'cancelado' ? 'canc' : ''}"><td>${r.number}</td><td>${new Date(r.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td><td>${CH[r.channel]}</td><td>${esc(r.customer)}</td><td>${esc(r.items || '')}${r.status === 'cancelado' ? ' <b>(cancelado)</b>' : ''}</td><td>${r.payment ? PAY[r.payment] : '—'}</td><td>${+r.discount ? brl(+r.discount) : ''}</td><td>${brl(+r.total)}</td><td>${brl(+r.profit)}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">Nenhuma venda no período.</td></tr>'}
+    </tbody></table>`;
+}
+$('#rep-pdf').addEventListener('click', () => {
+  if (!rep) return;
+  $('#print').innerHTML = `<header class="pr-head"><img src="${import.meta.env.BASE_URL}brand/vs-logo.svg" alt="" width="90" height="90"><div><h1>Relatório de vendas</h1><p>Mês comercial ${br(rep.from)} a ${br(rep.to)} · gerado em ${new Date().toLocaleString('pt-BR')}</p></div></header>` + reportHTML(rep);
+  const t = document.title; document.title = `VS Imports - vendas ${rep.from} a ${rep.to}`;
+  setTimeout(() => { window.print(); document.title = t; }, 150); // aguarda a logo
+});
+$('#rep-close').addEventListener('click', async () => {
+  if (!rep || !confirm(`Fechar o mês de ${br(rep.from)} a ${br(rep.to)}? Os números atuais ficam registrados (pode fechar de novo para atualizar).`)) return;
+  try { await rpc('close_month', { p_from: rep.from, p_to: rep.to }); toast('Mês fechado'); loadReport(); } catch (err) { toast(friendly(err), true); }
+});
+
+/* ============================================================ ajustes */
+async function loadSettings() {
+  const { data } = await supabase.from('store_settings').select('month_start_day').maybeSingle();
+  $('#set-form').day.value = data?.month_start_day || 1; previewPeriod();
+  loadTeam();
+}
+async function previewPeriod() { try { const [p] = await rpc('commercial_period', {}); $('#set-preview').textContent = `Mês atual: ${br(p.period_start)} a ${br(p.period_end)}`; } catch {} }
+$('#set-form').addEventListener('submit', async (e) => {
+  e.preventDefault(); const d = +e.target.day.value;
+  if (!(d >= 1 && d <= 28)) { toast('Escolha um dia entre 1 e 28.', true); return; }
+  const { error } = await supabase.from('store_settings').update({ month_start_day: d, updated_at: new Date().toISOString() }).eq('id', true);
+  toast(error ? friendly(error) : 'Mês comercial atualizado', !!error); previewPeriod();
+});
+$('#team-q').addEventListener('input', () => { clearTimeout(loadTeam.t); loadTeam.t = setTimeout(loadTeam, 250); });
+async function loadTeam() {
+  const q = $('#team-q').value.trim();
+  let req = supabase.from('profiles').select('id, full_name, email, phone, role').order('role').limit(50);
+  if (q) req = req.or(`full_name.ilike.%${q.replace(/[%,()]/g, '')}%,email.ilike.%${q.replace(/[%,()]/g, '')}%`);
+  else req = req.in('role', ['dono', 'vendedor']);
+  const { data, error } = await req; if (error) { toast(friendly(error), true); return; }
+  $('#team').innerHTML = data.map((p) => `<li><div><b>${esc(p.full_name || '—')}</b><small>${esc(p.email || '')} ${esc(p.phone || '')}</small></div>
+    <select data-role="${p.id}" ${p.id === auth.user.id ? 'disabled' : ''}>${['cliente', 'vendedor', 'dono'].map((r) => `<option value="${r}" ${r === p.role ? 'selected' : ''}>${r}</option>`).join('')}</select></li>`).join('') || '<li class="muted">Ninguém encontrado.</li>';
+}
+$('#team').addEventListener('change', async (e) => {
+  const s = e.target.closest('[data-role]'); if (!s) return;
+  if (s.value === 'dono' && !confirm('Dar acesso de DONO (vê custos, lucro e despesas)?')) { loadTeam(); return; }
+  try { await rpc('set_role', { p_user: s.dataset.role, p_role: s.value }); toast('Acesso atualizado'); } catch (err) { toast(friendly(err), true); }
+  loadTeam();
+});

@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Painel | VS Imports</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B0B0B">
+<link rel="icon" href="/brand/vs-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/styles/base.css">
+<link rel="stylesheet" href="/src/styles/admin.css">
+</head>
+<body class="adm">
+<div class="adm-gate" id="gate">
+  <img src="/brand/vs-logo.svg" alt="VS Imports" width="160" height="160">
+  <h1>Painel da loja</h1>
+  <p id="gate-msg">Entre com a conta da loja para continuar.</p>
+  <button class="pill solid lg" type="button" data-login>Entrar</button>
+  <a class="link" href="./">Voltar para o site</a>
+</div>
+
+<div class="adm-app" id="app" hidden>
+  <aside class="adm-side">
+    <a class="adm-brand" href="./" title="Ver o site"><img src="/brand/vs-icon.svg" alt="" width="40" height="40"><span>Painel</span></a>
+    <nav class="adm-nav" id="nav" aria-label="Painel">
+      <button data-go="resumo" aria-current="page"><i>◆</i><span>Resumo</span></button>
+      <button data-go="vender"><i>＋</i><span>Vender</span></button>
+      <button data-go="pedidos"><i>≡</i><span>Pedidos</span></button>
+      <button data-go="produtos"><i>▦</i><span>Produtos</span></button>
+      <button data-go="despesas" data-owner><i>−</i><span>Despesas</span></button>
+      <button data-go="relatorio" data-owner><i>▤</i><span>Relatório</span></button>
+      <button data-go="ajustes" data-owner><i>⚙</i><span>Ajustes</span></button>
+    </nav>
+    <div class="adm-me" id="me"></div>
+  </aside>
+
+  <main class="adm-main">
+    <!-- RESUMO -->
+    <section class="view" id="v-resumo">
+      <header class="v-head">
+        <h1>Resumo</h1>
+        <div class="seg" id="r-period" role="group" aria-label="Período">
+          <button data-p="hoje" aria-pressed="true">Hoje</button>
+          <button data-p="mes" aria-pressed="false">Mês comercial</button>
+          <button data-p="anterior" aria-pressed="false">Mês anterior</button>
+        </div>
+      </header>
+      <p class="period-label" id="r-label"></p>
+      <div class="kpis" id="kpis"></div>
+      <div class="two">
+        <div class="panel"><h2>Dia a dia</h2><div class="chart" id="chart"></div></div>
+        <div class="panel"><h2>Mais vendidos</h2><ol class="top" id="top"></ol></div>
+      </div>
+      <div class="panel"><h2>Estoque baixo</h2><ul class="low" id="low"></ul></div>
+    </section>
+
+    <!-- VENDER (PDV) -->
+    <section class="view" id="v-vender" hidden>
+      <header class="v-head"><h1>Nova venda</h1></header>
+      <div class="pdv">
+        <div class="pdv-pick">
+          <input class="search" id="pdv-q" type="search" placeholder="Buscar peça…" autocomplete="off">
+          <ul class="pdv-grid" id="pdv-grid"></ul>
+        </div>
+        <div class="pdv-cart panel">
+          <h2>Venda</h2>
+          <ul class="cart" id="cart"></ul>
+          <label class="lbl">Canal</label>
+          <div class="seg wide" id="pdv-channel" role="group" aria-label="Canal">
+            <button data-v="loja" aria-pressed="true">Loja</button>
+            <button data-v="instagram" aria-pressed="false">Instagram</button>
+            <button data-v="whatsapp" aria-pressed="false">WhatsApp</button>
+          </div>
+          <label class="lbl">Pagamento</label>
+          <div class="seg wide" id="pdv-pay" role="group" aria-label="Pagamento">
+            <button data-v="pix" aria-pressed="true">Pix</button>
+            <button data-v="credito" aria-pressed="false">Crédito</button>
+            <button data-v="debito" aria-pressed="false">Débito</button>
+            <button data-v="dinheiro" aria-pressed="false">Dinheiro</button>
+          </div>
+          <div class="row2">
+            <label class="fld">Cliente<input id="pdv-name" placeholder="Nome (opcional)" maxlength="120"></label>
+            <label class="fld">Telefone<input id="pdv-phone" type="tel" inputmode="tel" placeholder="Opcional" maxlength="30"></label>
+          </div>
+          <div class="row2">
+            <label class="fld">Desconto %<input id="pdv-disc" type="number" inputmode="decimal" min="0" max="30" step="1" value="0"></label>
+            <label class="fld">Entrega<select id="pdv-del"><option value="retirada">Retirou / na hora</option><option value="entrega">Enviar</option></select></label>
+          </div>
+          <div class="totals" id="pdv-totals"></div>
+          <button class="pill solid lg block" id="pdv-go" type="button">Registrar venda</button>
+          <p class="msg" id="pdv-msg" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PEDIDOS -->
+    <section class="view" id="v-pedidos" hidden>
+      <header class="v-head">
+        <h1>Pedidos</h1>
+        <div class="filters-row">
+          <select id="o-status"><option value="">Todos os status</option><option>pendente</option><option>pago</option><option>separado</option><option>entregue</option><option>cancelado</option></select>
+          <select id="o-channel"><option value="">Todos os canais</option><option value="site">Site</option><option value="loja">Loja</option><option value="instagram">Instagram</option><option value="whatsapp">WhatsApp</option></select>
+        </div>
+      </header>
+      <ul class="orders" id="orders"></ul>
+    </section>
+
+    <!-- PRODUTOS -->
+    <section class="view" id="v-produtos" hidden>
+      <header class="v-head">
+        <h1>Produtos</h1>
+        <div class="filters-row">
+          <input class="search" id="p-q" type="search" placeholder="Buscar…">
+          <button class="pill solid" id="p-new" type="button" data-owner>+ Nova peça</button>
+        </div>
+      </header>
+      <div class="table-wrap"><table class="tbl" id="p-table"></table></div>
+    </section>
+
+    <!-- DESPESAS -->
+    <section class="view" id="v-despesas" hidden>
+      <header class="v-head"><h1>Despesas</h1></header>
+      <form class="panel exp-form" id="exp-form">
+        <label class="fld">Data<input name="spent_on" type="date" required></label>
+        <label class="fld">Categoria<select name="category" required>
+          <option value="aluguel">Aluguel</option><option value="energia">Energia</option><option value="agua">Água</option><option value="internet">Internet</option>
+          <option value="salarios">Salários</option><option value="impostos">Impostos</option><option value="marketing">Marketing</option>
+          <option value="manutencao">Manutenção</option><option value="taxas">Taxas (cartão, app)</option><option value="outros">Outros</option></select></label>
+        <label class="fld grow">Descrição<input name="description" maxlength="200" placeholder="Ex.: aluguel de novembro"></label>
+        <label class="fld">Valor (R$)<input name="amount" type="number" inputmode="decimal" min="0.01" step="0.01" required></label>
+        <button class="pill solid" type="submit">Lançar</button>
+      </form>
+      <p class="period-label" id="exp-label"></p>
+      <ul class="exp-list" id="exp-list"></ul>
+    </section>
+
+    <!-- RELATÓRIO -->
+    <section class="view" id="v-relatorio" hidden>
+      <header class="v-head">
+        <h1>Relatório do mês</h1>
+        <div class="filters-row">
+          <button class="round" id="rep-prev" type="button" aria-label="Mês anterior">‹</button>
+          <span class="period-label strong" id="rep-label"></span>
+          <button class="round" id="rep-next" type="button" aria-label="Próximo mês">›</button>
+          <button class="pill" id="rep-pdf" type="button">Gerar PDF</button>
+          <button class="pill solid" id="rep-close" type="button">Fechar mês</button>
+        </div>
+      </header>
+      <div class="report" id="report"></div>
+    </section>
+
+    <!-- AJUSTES -->
+    <section class="view" id="v-ajustes" hidden>
+      <header class="v-head"><h1>Ajustes</h1></header>
+      <div class="two">
+        <form class="panel" id="set-form">
+          <h2>Mês comercial</h2>
+          <p class="muted">O mês da loja começa neste dia e termina no dia anterior do mês seguinte. Ex.: dia 5 = de 05/11 a 04/12.</p>
+          <label class="fld">Começa no dia<input name="day" type="number" min="1" max="28" required></label>
+          <p class="period-label" id="set-preview"></p>
+          <button class="pill solid" type="submit">Salvar</button>
+        </form>
+        <div class="panel">
+          <h2>Equipe</h2>
+          <p class="muted">Peça para a pessoa criar uma conta no site e depois dê o acesso aqui. Vendedor registra vendas e vê pedidos; dono vê tudo, inclusive custos e lucro.</p>
+          <input class="search" id="team-q" type="search" placeholder="Buscar por nome ou e-mail…">
+          <ul class="team" id="team"></ul>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- formulário de produto -->
+<div class="sheet" id="sheet" hidden>
+  <form class="sheet-panel" id="pf" novalidate>
+    <header><h2 id="pf-title">Nova peça</h2><button class="round" type="button" data-close aria-label="Fechar">×</button></header>
+    <div class="pf-body">
+      <div class="grid2">
+        <label class="fld grow">Nome<input name="name" required maxlength="120" placeholder="Ex.: Camiseta VS Classic"></label>
+        <label class="fld">Código<input name="id" required pattern="[a-z0-9-]{3,60}" placeholder="gerado do nome"></label>
+        <label class="fld">Categoria<select name="category"><option value="camisetas">Camisetas</option><option value="bones">Bonés</option><option value="tenis">Tênis</option><option value="bermudas">Bermudas</option><option value="acessorios">Acessórios</option></select></label>
+        <label class="fld">Modelo 3D<select name="model"><option value="tee">Camiseta</option><option value="cap">Boné</option><option value="shoe">Tênis</option><option value="shorts">Bermuda</option></select></label>
+      </div>
+      <label class="fld">Descrição<textarea name="description" rows="3" maxlength="2000"></textarea></label>
+
+      <h3>Valores</h3>
+      <div class="grid4">
+        <label class="fld">Custo (quanto pagou)<input name="cost" type="number" inputmode="decimal" min="0" step="0.01"></label>
+        <label class="fld">Preço de venda<input name="price" type="number" inputmode="decimal" min="0" step="0.01" required></label>
+        <label class="fld">Promoção: preço por<input name="promo_price" type="number" inputmode="decimal" min="0" step="0.01" placeholder="sem promoção"></label>
+        <label class="fld">Promoção até<input name="promo_until" type="date"></label>
+      </div>
+      <p class="margin" id="pf-margin"></p>
+
+      <h3>Cores</h3>
+      <ul class="colors-ed" id="pf-colors"></ul>
+      <button class="pill sm" type="button" id="pf-addcolor">+ Cor</button>
+
+      <h3>Tamanhos</h3>
+      <div class="sizes-ed" id="pf-sizes"></div>
+      <div class="row-inline"><input id="pf-size-new" placeholder="Outro tamanho" maxlength="10"><button class="pill sm" type="button" id="pf-addsize">Adicionar</button></div>
+
+      <h3>Quantidade em estoque</h3>
+      <div class="table-wrap"><table class="grid-qty" id="pf-grid"></table></div>
+      <p class="muted" id="pf-total"></p>
+
+      <h3>Fotos <small>(até 5, a primeira é a capa)</small></h3>
+      <ul class="photos" id="pf-photos"></ul>
+      <label class="pill sm file"><input type="file" id="pf-file" accept="image/*" multiple hidden>+ Adicionar fotos</label>
+
+      <div class="grid2 checks">
+        <label class="check"><input type="checkbox" name="featured"> Destaque na home</label>
+        <label class="check"><input type="checkbox" name="active" checked> À venda no site</label>
+      </div>
+    </div>
+    <footer>
+      <p class="msg" id="pf-msg" role="status" aria-live="polite"></p>
+      <button class="pill solid lg" type="submit" id="pf-save">Salvar peça</button>
+    </footer>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="print-area" id="print"></div>
+<script type="module" src="/src/admin.js"></script>
+</body>
+</html>

@@ -11,7 +11,8 @@
 <meta property="og:image" content="/brand/vs-logo-4096.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..800&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="/img/capa-loja.webp" fetchpriority="high">
 <link rel="stylesheet" href="/src/styles/base.css">
 <link rel="stylesheet" href="/src/styles/home.css">
 </head>
@@ -31,25 +32,39 @@
 </header>
 
 <main>
-  <!-- 1. Abertura: luz atravessando o título -->
-  <section class="light-hero" id="abertura" aria-labelledby="titulo">
-    <canvas class="light-canvas" aria-hidden="true"></canvas>
-    <div class="light-copy">
-      <h1 id="titulo" class="light-title">VS Imports</h1>
-      <div class="light-under reveal-late">
-        <p>A loja que veste os artistas. Camisetas, bonés e tênis com luz de vitrine, no Capão Raso e aqui.</p>
-        <div class="row">
-          <a class="pill solid" href="#loja">Entrar na loja 3D</a>
-          <a class="pill" href="#catalogo">Ver catálogo</a>
+  <!-- 1. Capa -->
+  <section class="cover" id="abertura" aria-labelledby="titulo">
+    <div class="cover-grid wrap">
+      <div class="cover-copy">
+        <p class="eyebrow rise" style="--d:0">Capão Raso · Curitiba · loja física e online</p>
+        <h1 id="titulo" class="cover-title">
+          <span class="line"><span class="rise" style="--d:1">A loja que</span></span>
+          <span class="line"><span class="rise" style="--d:2">veste os</span></span>
+          <span class="line"><em class="rise" style="--d:3">artistas.</em></span>
+        </h1>
+        <p class="cover-lede rise" style="--d:4">Camisetas, bonés, tênis e bermudas escolhidos a dedo. Entre na nossa loja em 3D, escolha a peça e retire no mesmo dia.</p>
+        <div class="row rise" style="--d:5">
+          <a class="pill solid lg" href="#loja"><span class="dia" aria-hidden="true"></span>Entrar na loja 3D</a>
+          <a class="pill lg" href="#catalogo">Ver catálogo</a>
         </div>
+        <ul class="cover-facts rise" style="--d:6">
+          <li><b>5% off</b><span>na primeira compra</span></li>
+          <li><b>30 dias</b><span>para trocar</span></li>
+          <li><b>Mesmo dia</b><span>retirada na loja</span></li>
+        </ul>
       </div>
+      <figure class="cover-art">
+        <div class="arch">
+          <img src="/img/capa-loja.webp" alt="Parede do logo da VS Imports, com araras de camisetas e luz quente" width="1500" height="1900" fetchpriority="high" decoding="async">
+        </div>
+        <a class="cover-card" id="cover-card" href="#catalogo"></a>
+        <span class="cover-seal" aria-hidden="true"><img src="/brand/vs-icon.svg" alt="" width="84" height="84"></span>
+      </figure>
     </div>
-    <div class="mood reveal-late" role="radiogroup" aria-label="Luz da loja">
-      <button role="radio" aria-checked="false" data-mood="manha">Manhã</button>
-      <button role="radio" aria-checked="false" data-mood="tarde">Tarde</button>
-      <button role="radio" aria-checked="true" data-mood="noite">Noite</button>
-    </div>
-    <p class="scroll-cue reveal-late" aria-hidden="true">role</p>
+    <div class="marquee" aria-hidden="true"><div class="marquee-track">
+      <span>Camisetas</span><i></i><span>Bonés</span><i></i><span>Tênis</span><i></i><span>Bermudas</span><i></i><span>Loja 3D</span><i></i><span>Capão Raso</span><i></i>
+      <span>Camisetas</span><i></i><span>Bonés</span><i></i><span>Tênis</span><i></i><span>Bermudas</span><i></i><span>Loja 3D</span><i></i><span>Capão Raso</span><i></i>
+    </div></div>
   </section>
 
   <!-- 2. Anel de peças (base do vídeo) que abre para a loja -->
