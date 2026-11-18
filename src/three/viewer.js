@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { makeProduct, disposeTree } from './models.js';
-import { AdaptiveScale, isMobile, reduceMotion, clamp, damp, watchVisible } from './perf.js';
+import { AdaptiveScale, isMobile, reduceMotion, clamp, damp, watchVisible, warmup } from './perf.js';
 
 export function studio(renderer, { background = null, floor = true, warm = 1 } = {}) {
   const scene = new THREE.Scene();
@@ -35,6 +35,7 @@ export function studio(renderer, { background = null, floor = true, warm = 1 } =
 export function setupRenderer(canvasOrHost, { alpha = true, preserve = false, maxDpr } = {}) {
   const dpr = Math.min(devicePixelRatio || 1, maxDpr ?? (isMobile ? 1.5 : 2));
   const r = new THREE.WebGLRenderer({ antialias: true, alpha, powerPreference: 'high-performance', preserveDrawingBuffer: preserve });
+  r.debug.checkShaderErrors = import.meta.env.DEV; // sem espera síncrona da GPU em produção
   r.setPixelRatio(dpr);
   r.toneMapping = THREE.ACESFilmicToneMapping;
   r.toneMappingExposure = 1.1;
@@ -138,6 +139,7 @@ export class Showcase {
     // shaders compilados em paralelo; só começa a desenhar quando estiverem prontos
     this.renderer.compileAsync(this.scene, this.camera).catch(() => {}).then(() => {
       watchVisible(host, (v) => (v ? this.start() : this.stop()));
+      if (!this.running) warmup(this.renderer, this.scene, this.camera);
     });
   }
   resize() {

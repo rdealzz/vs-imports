@@ -105,7 +105,7 @@ let store = null, storeReady = null, inside = false;
 const loadStore = () => storeReady ??= (async () => {
   try {
     const { Store3D } = await import('./three/store.js');
-    store = new Store3D($('#viewer'), {
+    const s3 = new Store3D($('#viewer'), {
       view: 'entrada',
       onView: (v) => $$('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v))),
       onHover: (it) => showTag(it, false),
@@ -113,6 +113,7 @@ const loadStore = () => storeReady ??= (async () => {
       onOpen: (it) => openProduct(it.pid, it.ci),
       onFrame: () => placeTag(),
     });
+    store = await s3.ready;
     buildStoreList();
     return store;
   } catch (err) {
@@ -128,10 +129,13 @@ const idle = (fn, t = 1500) => ('requestIdleCallback' in window ? requestIdleCal
 // janela aberta (login, sacola): se houver, espera fechar
 let lastInput = 0;
 ['pointerdown', 'keydown', 'touchstart'].forEach((t) => addEventListener(t, () => { lastInput = performance.now(); }, { passive: true, capture: true }));
+// rolando a página: o 3D espera (montar no meio da rolagem dá tranco)
+let lastScrollT = 0;
+['scroll', 'wheel', 'touchmove'].forEach((t) => addEventListener(t, () => { lastScrollT = performance.now(); }, { passive: true, capture: true }));
 const whenFree = (fn) => {
-  const busy = () => document.querySelector('.auth:not([hidden]), .bag:not([hidden])') || performance.now() - lastInput < 1500;
+  const busy = () => document.querySelector('.auth:not([hidden]), .bag:not([hidden])') || performance.now() - lastInput < 1500 || performance.now() - lastScrollT < 500;
   if (!busy()) { fn(); return; }
-  setTimeout(() => whenFree(fn), 700);
+  setTimeout(() => whenFree(fn), 300);
 };
 addEventListener('load', () => setTimeout(() => whenFree(loadStore), 1200));
 

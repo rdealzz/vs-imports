@@ -34,3 +34,36 @@ export function watchVisible(el, cb, margin = '100px') {
 
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const damp = (a, b, lambda, dt) => a + (b - a) * (1 - Math.exp(-lambda * dt));
+
+// ---- "pré-aquecimento" da GPU em pedaços pequenos, só quando a página está parada
+let lastScroll = 0;
+addEventListener('scroll', () => { lastScroll = performance.now(); }, { passive: true, capture: true });
+addEventListener('wheel', () => { lastScroll = performance.now(); }, { passive: true, capture: true });
+addEventListener('touchmove', () => { lastScroll = performance.now(); }, { passive: true, capture: true });
+// espera a pessoa parar de rolar e o navegador ficar ocioso
+export function quiet(ms = 350) {
+  return new Promise((res) => {
+    const check = () => {
+      const left = ms - (performance.now() - lastScroll);
+      if (left > 0) { setTimeout(check, left + 20); return; }
+      if ('requestIdleCallback' in window) requestIdleCallback((d) => (d.timeRemaining() > 8 || d.didTimeout ? res() : setTimeout(check, 30)), { timeout: 1500 });
+      else setTimeout(res, 16);
+    };
+    check();
+  });
+}
+// sobe as texturas uma por vez e faz um primeiro desenho de 1 pixel (sombra,
+// geometria e estados ficam prontos): quando a cena aparecer, não trava
+export async function warmup(renderer, scene, camera, { before, after } = {}) {
+  const texs = new Set();
+  scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => m && Object.values(m).forEach((v) => v?.isTexture && texs.add(v))); });
+  if (scene.environment?.isTexture) texs.add(scene.environment);
+  for (const t of texs) { await quiet(); try { renderer.initTexture(t); } catch {} }
+  await quiet();
+  before?.();
+  const sc = renderer.getScissorTest();
+  renderer.setScissorTest(true); renderer.setScissor(0, 0, 1, 1);
+  try { renderer.render(scene, camera); } catch {}
+  renderer.setScissorTest(sc);
+  after?.();
+}

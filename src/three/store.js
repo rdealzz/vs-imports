@@ -7,7 +7,9 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PRODUCTS, byId } from '../data/products.js';
 import { makeProduct, makeTee, makeCap, makeShoe, makeShorts } from './models.js';
-import { AdaptiveScale, isMobile, reduceMotion, clamp, watchVisible } from './perf.js';
+import { AdaptiveScale, isMobile, reduceMotion, clamp, watchVisible, warmup, quiet } from './perf.js';
+// pausa curta entre etapas pesadas: a página continua desenhando (até 60 fps) enquanto a loja monta
+const breathe = (capture) => capture ? Promise.resolve() : Promise.race([quiet(250), new Promise((r) => setTimeout(r, 900))]).then(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))));
 
 const FONT = '"Archivo", "Arial Narrow", Arial, sans-serif';
 
@@ -177,6 +179,8 @@ export class Store3D {
     const maxDpr = Math.min(devicePixelRatio || 1, isMobile ? 1.75 : 2);
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: !!opts.capture });
     this.renderer.setPixelRatio(maxDpr);
+    // em produção não consulta erros de shader (a consulta força a GPU a esperar e trava o quadro)
+    this.renderer.debug.checkShaderErrors = import.meta.env.DEV;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.12;
     this.renderer.shadowMap.enabled = true;
@@ -187,14 +191,28 @@ export class Store3D {
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0b0b0d);
+    this.camera = new THREE.PerspectiveCamera(isMobile ? 62 : 52, 1, 0.05, 120);
+    this.orbit = { target: new THREE.Vector3(), r: 5, theta: 0, phi: 1.2 };
+    this.running = false;
+    // monta em etapas (cada uma curta) para não travar a rolagem
+    this.ready = this.init(host, opts);
+  }
+
+  async init(host, opts) {
+    await breathe(opts.capture);
     const pm = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+    pm.dispose();
     this.scene.environmentIntensity = 0.3;
-    this.camera = new THREE.PerspectiveCamera(isMobile ? 62 : 52, 1, 0.05, 120);
     this.M = makeMats();
     this.M.onLogo = () => { this.dirty = true; };
+    await breathe(opts.capture);
     this.build();
-    this.orbit = { target: new THREE.Vector3(), r: 5, theta: 0, phi: 1.2 };
+    await breathe(opts.capture);
+    this.placeProducts();
+    this.renderer.shadowMap.needsUpdate = true;
+    this.compile();
+    await breathe(opts.capture);
     this.anim = null;
     this.raycaster = new THREE.Raycaster();
     this.ptr = new THREE.Vector2(); this.ptrIn = false; this.needPick = false;
@@ -202,8 +220,8 @@ export class Store3D {
     this.resize();
     if (window.ResizeObserver) new ResizeObserver(() => this.resize()).observe(host);
     this.attach();
-    this.running = false;
     if (!opts.capture) watchVisible(host, (v) => (v ? this.start() : this.stop()));
+    return this;
   }
 
   resize() {
@@ -364,12 +382,17 @@ export class Store3D {
     this.scene.add(merged, tracksMerged);
     this.tracks = tracksMerged;
 
-    this.placeProducts();
-    this.renderer.shadowMap.needsUpdate = true;
+  }
+
+  compile() {
     // compila os shaders em paralelo (KHR_parallel_shader_compile): não congela a página
     this.compiled = !!this.opts.capture;
     if (this.opts.capture) this.renderer.compile(this.scene, this.camera);
-    else this.renderer.compileAsync(this.scene, this.camera).then(() => { this.compiled = true; this.dirty = true; }).catch(() => { this.compiled = true; this.dirty = true; });
+    else this.renderer.compileAsync(this.scene, this.camera).catch(() => {}).then(() => {
+      this.compiled = true; this.dirty = true;
+      // tudo visível no aquecimento (trilhos e fachada também sobem para a GPU)
+      if (!this.running) warmup(this.renderer, this.scene, this.camera, { before: () => { this.tracks.visible = true; this.outside.visible = true; } }).then(() => { this.dirty = true; });
+    });
   }
 
   /* --------------------------------------------- peças clicáveis (instanced) */
