@@ -109,3 +109,11 @@
 }
 @media (max-width: 560px) { .addr-pick li { flex-direction: column; gap: 4px; } .addr-pick .opt { width: 100%; } .addr-pick .link { align-self: flex-end; } }
 .co-page .wa-float { bottom: calc(90px + env(safe-area-inset-bottom, 0)); }
+.done-act { display: grid; gap: 10px; justify-items: center; margin: 16px 0 6px; }
+.done-act .pill { margin: 0; gap: 10px; }
+.done-act .pill.solid { background: #1F6F4A; color: #fff; border-color: #1F6F4A; }
+.done-act .link { margin-top: 4px; }
+#pdf-msg { min-height: 1.4em; color: var(--gold-light); }
+.co-finished .wa-float { display: none; }
+.done-act { width: 100%; max-width: 420px; }
+.done-act .pill.solid { width: 100%; white-space: normal; text-align: center; line-height: 1.25; padding: 12px 20px; }

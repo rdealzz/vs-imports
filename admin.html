@@ -147,9 +147,14 @@
         <h1>Pedidos</h1>
         <div class="filters-row">
           <select id="o-status"><option value="">Todos os status</option><option>pendente</option><option>pago</option><option>separado</option><option>entregue</option><option>cancelado</option></select>
-          <select id="o-channel"><option value="">Todos os canais</option><option value="site">Site</option><option value="loja">Loja</option><option value="instagram">Instagram</option><option value="whatsapp">WhatsApp</option></select>
+          <select id="o-channel" hidden><option value="">Loja, Instagram e WhatsApp</option><option value="loja">Só balcão</option><option value="instagram">Só Instagram</option><option value="whatsapp">Só WhatsApp</option></select>
         </div>
       </header>
+      <div class="o-tabs" id="o-src" role="tablist" aria-label="Origem da venda">
+        <button type="button" role="tab" data-v="" aria-selected="true"><span>Todas</span><b id="o-n-all">–</b></button>
+        <button type="button" role="tab" data-v="site" aria-selected="false"><span>Vendas do site</span><b id="o-n-site">–</b></button>
+        <button type="button" role="tab" data-v="loja" aria-selected="false"><span>Vendas da loja</span><b id="o-n-loja">–</b><small>balcão, Instagram e WhatsApp</small></button>
+      </div>
       <ul class="orders" id="orders"></ul>
     </section>
 

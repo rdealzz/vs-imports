@@ -375,3 +375,4 @@ button { font: inherit; color: inherit; }
 .addr-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 @media (max-width: 560px) { .af-grid { grid-template-columns: 1fr; } .af-grid .s2 { grid-column: auto; } }
 .bag-ship { margin: 0; font-size: 13px; color: var(--ink-2); }
+.pill[aria-disabled="true"] { opacity: .6; cursor: progress; }

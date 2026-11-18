@@ -8,6 +8,7 @@ import { initAuth, auth, openAuth } from './ui/auth.js';
 import { bag } from './ui/bag.js';
 import { listAddresses, formHTML, bindForm, addressLine } from './ui/addresses.js';
 import { renderFooter } from './ui/footer.js';
+import { orderPdf, pdfName, downloadBlob, uploadPdf, waOrderLink } from './lib/orderPdf.js';
 
 // quando o Mercado Pago estiver integrado, troque para true
 const MP_ONLINE = false;
@@ -114,6 +115,9 @@ async function submit() {
   const text = [`Olá, VS Imports! Fiz o pedido #${o.number} pelo site:`, ...lines,
     `Total: ${brl(+o.total)}${+o.discount ? ` (com ${brl(+o.discount)} de desconto)` : ''}`, `Pagamento: ${pay()}`,
     a ? `Entrega: ${a.street}, ${a.number}${a.complement ? ' ' + a.complement : ''} - ${a.district}, ${a.city}/${a.state}, CEP ${a.cep}` : 'Vou retirar na loja.'].join('\n');
+  const pdfItems = items.map((i) => { const p = find(i.id); return { name: p.name, color: i.color, size: i.size, qty: i.qty, unit_price: p.finalPrice, photo: p.photos?.[0] || new URL(img(p.id, i.ci ? 'card-' + i.ci : 'card'), location.href).href }; });
+  const pdf = orderPdf(o, pdfItems); // gera em segundo plano
+  const link = pdf.then((b) => uploadPdf(supabase, b, o)); // e já guarda para o link do WhatsApp
   bag.clear();
   step(4);
   $('#co').hidden = true;
@@ -122,8 +126,19 @@ async function submit() {
     <p class="eyebrow">Pedido confirmado</p><h1>Pedido #${o.number}</h1>
     <p>Total <b>${brl(+o.total)}</b>${+o.discount ? `, você economizou ${brl(+o.discount)}` : ''}. Suas peças estão reservadas por 48 horas.</p>
     <p>${del === 'entrega' ? 'Envie a mensagem abaixo para combinarmos o frete e o pagamento.' : 'Envie a mensagem abaixo e combine o horário da retirada.'}</p>
-    <a class="pill solid lg" href="https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
+    <div class="done-act">
+      <a class="pill solid lg" id="pdf-wa" href="https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener" aria-disabled="true"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg><span>Preparando o PDF…</span></a>
+      <button class="link" type="button" id="pdf-dl">Baixar o PDF do pedido</button>
+    </div>
+    <p class="small" id="pdf-msg" role="status" aria-live="polite"></p>
     <p class="small">Acompanhe em <b>Minha conta → Meus pedidos</b>. <a href="${STORE.vipGroup}" target="_blank" rel="noopener">Entre no grupo VIP</a> e receba as próximas ofertas antes de todo mundo.</p>`;
+  document.body.classList.add('co-finished');
+  const pm = $('#pdf-msg'), wa = $('#pdf-wa');
+  link.then((url) => { wa.href = waOrderLink(o, url); wa.querySelector('span').textContent = 'Enviar pedido + PDF no WhatsApp'; })
+    .catch(() => { wa.querySelector('span').textContent = 'Enviar pedido no WhatsApp'; }) // sem PDF: vai a mensagem com os itens
+    .finally(() => wa.removeAttribute('aria-disabled'));
+  wa.addEventListener('click', (e) => { if (wa.hasAttribute('aria-disabled')) { e.preventDefault(); pm.textContent = 'Só um instante, o PDF está ficando pronto…'; } });
+  $('#pdf-dl').onclick = async () => { try { downloadBlob(await pdf, pdfName(o)); } catch { pm.textContent = 'Não foi possível gerar o PDF.'; } };
   scrollTo({ top: 0, behavior: 'smooth' });
 }
 

@@ -6,6 +6,7 @@ import { supabase, hasSupabase, friendly } from './lib/supabase.js';
 import { initAuth, auth } from './ui/auth.js';
 import { loadCatalog, photoUrl } from './data/catalog.js';
 import { brl, img, CATEGORIES } from './data/products.js';
+import { orderPdf, pdfName, downloadBlob, uploadPdf } from './lib/orderPdf.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -305,7 +306,10 @@ $('#pdv-go').addEventListener('click', async () => {
       p_discount_percent: +$('#pdv-disc').value || 0, p_delivery: $('#pdv-del').value,
     });
     toast(`Venda #${o.number} registrada: ${brl(+o.total)}`);
-    $('#pdv-msg').textContent = `Venda #${o.number} · ${brl(+o.total)} · estoque atualizado.`;
+    const sold = cart.map((i) => ({ product_id: i.id, name: i.name, color: i.color, size: i.size, qty: i.qty, unit_price: i.price }));
+    orderCache.set(String(o.id), { ...o, order_items: sold });
+    $('#pdv-msg').innerHTML = `Venda #${o.number} · ${brl(+o.total)} · estoque atualizado.<span class="pdf-act"><button class="pill sm" type="button" data-pdf="${o.id}">PDF do pedido</button><a class="pill sm wa" data-pdf-wa="${o.id}" target="_blank" rel="noopener" aria-disabled="true">Preparando PDF…</a></span>`;
+    prepSaleLink(o.id);
     cart = []; $('#pdv-name').value = ''; $('#pdv-phone').value = ''; $('#pdv-disc').value = 0;
     await reloadCatalog(); renderPdvGrid(); renderCart();
   } catch (err) { $('#pdv-msg').textContent = friendly(err); toast(friendly(err), true); await reloadCatalog(); renderPdvGrid(); }
@@ -313,15 +317,61 @@ $('#pdv-go').addEventListener('click', async () => {
 });
 
 /* ============================================================ pedidos */
+// PDF do pedido (ficha para separar) e envio pelo WhatsApp
+const orderCache = new Map();
+async function pdfOf(id) {
+  const o = orderCache.get(String(id));
+  const items = o.order_items.map((i) => ({ ...i, photo: new URL(picId(i.product_id), location.href).href }));
+  if (!o.customer_name && o.user_id) { const { data: p } = await supabase.from('profiles').select('full_name, phone').eq('id', o.user_id).maybeSingle(); if (p) { o.customer_name = p.full_name; o.customer_phone ||= p.phone; } }
+  return { o, blob: await orderPdf(o, items) };
+}
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-pdf], [data-pdf-wa]'); if (!b) return;
+  const id = b.dataset.pdf || b.dataset.pdfWa;
+  if (b.dataset.pdf) { b.disabled = true; try { const { o, blob } = await pdfOf(id); downloadBlob(blob, pdfName(o)); } catch { toast('Não foi possível gerar o PDF', true); } finally { b.disabled = false; } }
+});
+// depois da venda no balcão: já gera o PDF, guarda e monta o link do WhatsApp
+async function prepSaleLink(id) {
+  const a = $(`[data-pdf-wa="${id}"]`); if (!a) return;
+  try {
+    const { o, blob } = await pdfOf(id);
+    const url = await uploadPdf(supabase, blob, o);
+    const ph = String(o.customer_phone || '').replace(/\D/g, '').replace(/^55/, '');
+    const msg = `Olá${o.customer_name ? ', ' + o.customer_name.split(' ')[0] : ''}! Aqui é da VS Imports. Seu pedido #${o.number} (${brl(+o.total)}) está confirmado.\nPDF do pedido: ${url}`;
+    a.href = `https://wa.me/${ph.length >= 10 ? '55' + ph : ''}?text=${encodeURIComponent(msg)}`;
+    a.textContent = ph.length >= 10 ? 'Enviar PDF no WhatsApp do cliente' : 'Enviar PDF no WhatsApp';
+    a.removeAttribute('aria-disabled');
+  } catch { a.textContent = 'PDF indisponível'; }
+}
+
 $('#o-status').addEventListener('change', loadOrders); $('#o-channel').addEventListener('change', loadOrders);
+let oSrc = '';
+$('#o-src').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-v]'); if (!b) return;
+  oSrc = b.dataset.v; $$('#o-src [data-v]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+  $('#o-channel').hidden = oSrc !== 'loja'; $('#o-channel').value = ''; loadOrders();
+});
+// totais de cada aba (mesmo filtro de status, sem contar cancelados no valor)
+async function ordersTotals() {
+  let q = supabase.from('orders').select('channel, total, status').order('created_at', { ascending: false }).limit(1000);
+  if ($('#o-status').value) q = q.eq('status', $('#o-status').value);
+  const { data } = await q; if (!data) return;
+  const sum = (f) => { const l = data.filter(f), ok = l.filter((o) => o.status !== 'cancelado'); return `${l.length} · ${brl(ok.reduce((t, o) => t + +o.total, 0))}`; };
+  $('#o-n-all').textContent = sum(() => true);
+  $('#o-n-site').textContent = sum((o) => o.channel === 'site');
+  $('#o-n-loja').textContent = sum((o) => o.channel !== 'site');
+}
 async function loadOrders() {
   let q = supabase.from('orders').select('id, number, created_at, channel, payment, status, subtotal, discount, total, coupon_code, customer_name, customer_phone, delivery, notes, shipping_address, user_id, order_items(product_id, name, color, size, qty, unit_price)').order('created_at', { ascending: false }).limit(150);
   if ($('#o-status').value) q = q.eq('status', $('#o-status').value);
-  if ($('#o-channel').value) q = q.eq('channel', $('#o-channel').value);
+  if (oSrc === 'site') q = q.eq('channel', 'site');
+  else if (oSrc === 'loja') q = $('#o-channel').value ? q.eq('channel', $('#o-channel').value) : q.neq('channel', 'site');
   const { data, error } = await q; if (error) throw error;
+  ordersTotals();
   const ids = [...new Set(data.map((o) => o.user_id).filter(Boolean))];
   const people = new Map();
   if (ids.length) { const { data: ps } = await supabase.from('profiles').select('id, full_name, phone, email').in('id', ids); (ps || []).forEach((p) => people.set(p.id, p)); }
+  data.forEach((o) => orderCache.set(String(o.id), o));
   $('#orders').innerHTML = data.length ? data.map((o) => {
     const who = people.get(o.user_id);
     const name = o.customer_name || who?.full_name || who?.email || 'Cliente no balcão';
