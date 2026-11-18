@@ -331,3 +331,6 @@ button { font: inherit; color: inherit; }
   .lux .auth-sub { font-size: 13px; margin-bottom: 6px; }
   .lux #auth-go { min-height: 46px; }
 }
+/* janela aberta: a página atrás não rola (inclusive no iPhone) */
+.auth, .bag { overscroll-behavior: contain; touch-action: none; }
+.auth-panel, .bag-panel { touch-action: pan-y; overscroll-behavior: contain; }

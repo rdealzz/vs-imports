@@ -98,10 +98,11 @@ export function openAuth(m = 'entrar', { reason, then } = {}) {
   const el = document.getElementById('auth');
   setMode(m); after = then || null;
   if (reason) el.querySelector('#auth-sub').innerHTML = reason;
+  document.dispatchEvent(new CustomEvent('vs-cover', { detail: true })); // a capa para antes de a janela aparecer
   el.hidden = false;
   el.querySelector('input:not([hidden])')?.focus();
 }
-const closeAuth = () => { document.getElementById('auth').hidden = true; };
+const closeAuth = () => { document.getElementById('auth').hidden = true; document.dispatchEvent(new CustomEvent('vs-cover', { detail: false })); };
 
 async function submit(e) {
   e.preventDefault();
@@ -138,7 +139,7 @@ async function submit(e) {
 
 async function showOrders() {
   const m = document.getElementById('orders-modal'), ul = document.getElementById('my-orders');
-  m.hidden = false; ul.innerHTML = '<li class="muted">Carregando…</li>';
+  document.dispatchEvent(new CustomEvent('vs-cover', { detail: true })); m.hidden = false; ul.innerHTML = '<li class="muted">Carregando…</li>';
   const { data, error } = await supabase.from('orders').select('number, created_at, status, total, discount, order_items(name, color, size, qty)').order('created_at', { ascending: false }).limit(30);
   if (error) { ul.innerHTML = `<li class="muted">${friendly(error)}</li>`; return; }
   ul.innerHTML = data.length ? data.map((o) => `<li><div><b>Pedido #${o.number}</b><span class="st st-${o.status}">${o.status}</span></div>
@@ -179,8 +180,9 @@ export async function initAuth() {
   });
   el.querySelector('#auth-form').addEventListener('submit', submit);
   const om = document.getElementById('orders-modal');
-  om.addEventListener('click', (e) => { if (e.target === om || e.target.closest('[data-orders-close]')) om.hidden = true; });
-  addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeAuth(); om.hidden = true; } });
+  const closeOrders = () => { om.hidden = true; document.dispatchEvent(new CustomEvent('vs-cover', { detail: false })); };
+  om.addEventListener('click', (e) => { if (e.target === om || e.target.closest('[data-orders-close]')) closeOrders(); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (!document.getElementById('auth').hidden) closeAuth(); if (!om.hidden) closeOrders(); } });
   document.addEventListener('click', async (e) => {
     if (e.target.closest('[data-login]')) openAuth('entrar');
     if (e.target.closest('[data-logout]')) { await supabase.auth.signOut(); }

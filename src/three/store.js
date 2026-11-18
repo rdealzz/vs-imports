@@ -366,7 +366,10 @@ export class Store3D {
 
     this.placeProducts();
     this.renderer.shadowMap.needsUpdate = true;
-    this.renderer.compile(this.scene, this.camera);
+    // compila os shaders em paralelo (KHR_parallel_shader_compile): não congela a página
+    this.compiled = !!this.opts.capture;
+    if (this.opts.capture) this.renderer.compile(this.scene, this.camera);
+    else this.renderer.compileAsync(this.scene, this.camera).then(() => { this.compiled = true; this.dirty = true; }).catch(() => { this.compiled = true; this.dirty = true; });
   }
 
   /* --------------------------------------------- peças clicáveis (instanced) */
@@ -680,7 +683,7 @@ export class Store3D {
       this.dirty = true;
     }
     if (this.needPick && this.ptrIn && !this.anim) { this.needPick = false; this.setHover(this.pick()); this.renderer.domElement.style.cursor = this.hover ? 'pointer' : 'grab'; }
-    if (!this.dirty) { this.scale.reset(); return; }
+    if (!this.dirty || !this.compiled) { this.scale.reset(); return; }
     this.dirty = false;
     const L = this.L;
     this.tracks.visible = this.camera.position.y < L.H - 0.05;

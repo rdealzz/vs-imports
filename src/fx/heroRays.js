@@ -63,10 +63,7 @@ export class HeroRays {
     this.gl = gl;
     this.steps = isMobile ? 32 : 44;
     this.scale = isMobile ? 0.36 : 0.6; // resolução do canvas (os fachos são suaves)
-    this.occ = this.prog(OCC); this.main = this.prog(MAIN);
-    const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    this.textTex = gl.createTexture(); this.occTex = gl.createTexture(); this.fbo = gl.createFramebuffer();
+    this.initGL();
     this.sun = [0.3, 0.6]; this.home = [0.3, 0.6]; this.ptr = null; this.ptrT = 0;
     this.bright = reduceMotion ? 1 : 0; this.t0 = performance.now(); this.slow = 0;
     new ResizeObserver(() => this.resize()).observe(section);
@@ -79,8 +76,20 @@ export class HeroRays {
     new IntersectionObserver(([e]) => { on = e.isIntersecting; this.toggle(on && !document.hidden); }).observe(section);
     document.addEventListener('visibilitychange', () => this.toggle(on && !document.hidden));
     addEventListener('scroll', () => { this.scrollT = performance.now(); }, { passive: true });
+    // uma janela vai abrir por cima: esconde o canvas no mesmo quadro (sem recomposição pesada)
+    document.addEventListener('vs-cover', (e) => {
+      const covered = e.detail || !!document.querySelector('.auth:not([hidden]), .bag:not([hidden])');
+      canvas.style.visibility = covered ? 'hidden' : '';
+    });
     this.resize();
     if (reduceMotion) requestAnimationFrame(() => this.draw(0)); else this.toggle(true);
+  }
+  initGL() {
+    const gl = this.gl;
+    this.occ = this.prog(OCC); this.main = this.prog(MAIN);
+    const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    this.textTex = gl.createTexture(); this.occTex = gl.createTexture(); this.fbo = gl.createFramebuffer();
   }
   prog(fs) {
     const gl = this.gl;
@@ -165,7 +174,9 @@ export class HeroRays {
   }
   tick(now) {
     // durante a rolagem a luz fica parada no último quadro: a página rola livre
-    if (now - (this.scrollT || 0) < 150 || scrollY > innerHeight * 0.35) { this.last = now; this.slow = 0; return; }
+    // parada também quando algo cobre a capa (login, sacola, loja 3D aberta)
+    const covered = document.body.classList.contains('in-store') || document.querySelector('.auth:not([hidden]), .bag:not([hidden])');
+    if (covered || now - (this.scrollT || 0) < 150 || scrollY > innerHeight * 0.35) { this.last = now; this.slow = 0; return; }
     const dt = Math.min(0.05, (now - this.last) / 1000); this.last = now;
     const k = Math.min(1, (now - this.t0) / 2400); this.bright = 1 - Math.pow(1 - k, 3);
     if (k < 1 && now - (this.lastText || 0) > 200) { this.lastText = now; this.drawText(); } // segue as letras entrando

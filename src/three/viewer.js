@@ -135,7 +135,10 @@ export class Showcase {
     this.progress = 0; this.target = 0;
     this.resize();
     new ResizeObserver(() => this.resize()).observe(host);
-    watchVisible(host, (v) => (v ? this.start() : this.stop()));
+    // shaders compilados em paralelo; só começa a desenhar quando estiverem prontos
+    this.renderer.compileAsync(this.scene, this.camera).catch(() => {}).then(() => {
+      watchVisible(host, (v) => (v ? this.start() : this.stop()));
+    });
   }
   resize() {
     const w = this.host.clientWidth, h = this.host.clientHeight; if (!w || !h) return;

@@ -104,8 +104,8 @@ export function initBag({ onOpen, onClose } = {}) {
     <button class="pill solid block" id="bag-go" type="button">Finalizar pedido</button>
     <p class="small" id="bag-msg" role="status" aria-live="polite"></p>`;
   let lastFocus;
-  const open = () => { lastFocus = document.activeElement; el.hidden = false; render(); onOpen?.(); el.querySelector('[data-bag-close]').focus(); };
-  const close = () => { el.hidden = true; onClose?.(); lastFocus?.focus?.(); };
+  const open = () => { lastFocus = document.activeElement; document.dispatchEvent(new CustomEvent('vs-cover', { detail: true })); el.hidden = false; render(); onOpen?.(); el.querySelector('[data-bag-close]').focus(); };
+  const close = () => { el.hidden = true; document.dispatchEvent(new CustomEvent('vs-cover', { detail: false })); onClose?.(); lastFocus?.focus?.(); };
   document.querySelectorAll('[data-bag-open]').forEach((b) => b.addEventListener('click', open));
   el.addEventListener('click', (e) => {
     if (e.target === el || e.target.closest('[data-bag-close]')) close();

@@ -22,6 +22,11 @@ if (!reduceMotion) {
   gsap.ticker.lagSmoothing(0);
 }
 const lockScroll = (on) => { if (lenis) on ? lenis.stop() : lenis.start(); document.documentElement.style.overflow = on ? 'hidden' : ''; };
+// login/criar conta e sacola abertos: o fundo fica parado (não rola atrás da janela)
+document.addEventListener('vs-cover', (e) => {
+  const open = e.detail || !!document.querySelector('.auth:not([hidden]), .bag:not([hidden])') || document.body.classList.contains('in-store');
+  lockScroll(open);
+});
 
 const bagUI = initBag({ onOpen: () => lockScroll(true), onClose: () => lockScroll(false) });
 
@@ -119,7 +124,16 @@ const loadStore = () => storeReady ??= (async () => {
 })();
 new IntersectionObserver(([e], io) => { if (e.isIntersecting) { io.disconnect(); loadStore(); } }, { rootMargin: '150% 0px' }).observe(slot);
 const idle = (fn, t = 1500) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: t + 2000 }) : setTimeout(fn, t));
-addEventListener('load', () => setTimeout(() => idle(() => loadStore()), 900));
+// o 3D pesado monta no tempo ocioso depois de carregar, mas nunca com uma
+// janela aberta (login, sacola): se houver, espera fechar
+let lastInput = 0;
+['pointerdown', 'keydown', 'touchstart'].forEach((t) => addEventListener(t, () => { lastInput = performance.now(); }, { passive: true, capture: true }));
+const whenFree = (fn) => {
+  const busy = () => document.querySelector('.auth:not([hidden]), .bag:not([hidden])') || performance.now() - lastInput < 1500;
+  if (!busy()) { fn(); return; }
+  setTimeout(() => whenFree(fn), 700);
+};
+addEventListener('load', () => setTimeout(() => whenFree(loadStore), 1200));
 
 // animação FLIP entre o lugar na página e a tela cheia
 function flip(el, from, to, dur = 560) {
@@ -239,7 +253,7 @@ setFeat(0);
 let showcaseReady = null;
 const loadShowcase = () => showcaseReady ??= import('./three/viewer.js').then(({ Showcase }) => { showcase = new Showcase($('#feature-canvas'), featured); }).catch((err) => console.warn(err));
 new IntersectionObserver(([e], io) => { if (e.isIntersecting) { io.disconnect(); loadShowcase(); } }, { rootMargin: '100% 0px' }).observe($('#destaques'));
-addEventListener('load', () => setTimeout(() => idle(() => storeReady?.then(() => idle(loadShowcase)) ?? loadShowcase()), 1400));
+addEventListener('load', () => setTimeout(() => whenFree(() => (storeReady ? storeReady.then(() => setTimeout(() => whenFree(loadShowcase), 400)) : loadShowcase())), 1800));
 // navegação sem precisar rolar: setas e pontos
 const fnav = $('.feature-label');
 fnav.outerHTML = `<div class="feature-nav" role="group" aria-label="Destaques">
