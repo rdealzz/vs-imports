@@ -346,11 +346,11 @@ button { font: inherit; color: inherit; }
 .foot-social { display: flex; gap: 8px; }
 .foot-social a { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid rgba(200, 169, 104, .4); color: #F3EEE5; transition: background .2s, color .2s; }
 .foot-social a:hover { background: var(--gold-grad); color: #111; }
-.wa-float { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0)); z-index: 45; display: inline-flex; align-items: center; gap: 8px; height: 50px; padding: 0 18px 0 14px; border-radius: 999px; background: #1F6F4A; color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; box-shadow: 0 14px 30px -10px rgba(0, 0, 0, .45); transition: transform .3s var(--spring); }
-.wa-float svg { width: 22px; height: 22px; }
+.wa-float { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0)); z-index: 45; display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border-radius: 50%; background: #1F6F4A; color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; box-shadow: 0 14px 30px -10px rgba(0, 0, 0, .45); transition: transform .3s var(--spring); }
+.wa-float svg { width: 28px; height: 28px; }
 .wa-float:hover { transform: translateY(-2px); }
 .in-store .wa-float, body:has(.auth:not([hidden])) .wa-float, body:has(.bag:not([hidden])) .wa-float { display: none; }
-@media (max-width: 760px) { .wa-float span { display: none; } .wa-float { width: 52px; padding: 0; justify-content: center; } }
+@media (max-width: 760px) { .wa-float { width: 52px; height: 52px; } }
 .adm .wa-float { display: none; }
 
 /* ---------- meus endereços (janela clara) ---------- */

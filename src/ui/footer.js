@@ -72,6 +72,6 @@ export function renderFooter(el = document.getElementById('rodape'), { home = ''
   el.querySelector('#foot-company').innerHTML = `© ${new Date().getFullYear()} ${STORE.company} · CNPJ ${STORE.cnpj} · ${STORE.city}`;
   // botão flutuante de WhatsApp (uma vez por página)
   if (!document.querySelector('.wa-float')) {
-    document.body.insertAdjacentHTML('beforeend', `<a class="wa-float" href="${wa()}" target="_blank" rel="noopener" aria-label="Falar com a VS Imports no WhatsApp">${ICON.wa}<span>Ajuda e pedidos</span></a>`);
+    document.body.insertAdjacentHTML('beforeend', `<a class="wa-float" href="${wa()}" target="_blank" rel="noopener" aria-label="Falar com a VS Imports no WhatsApp: pedidos, dúvidas e ajuda" title="WhatsApp: pedidos e dúvidas">${ICON.wa}</a>`);
   }
 }
