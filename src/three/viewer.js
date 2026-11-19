@@ -5,7 +5,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { makeProduct, disposeTree } from './models.js';
 import { AdaptiveScale, isMobile, reduceMotion, clamp, damp, watchVisible, warmup } from './perf.js';
 
-export function studio(renderer, { background = null, floor = true, warm = 1 } = {}) {
+export function studio(renderer, { background = null, floor = true, warm = 1, soft = false } = {}) {
   const scene = new THREE.Scene();
   if (background != null) scene.background = new THREE.Color(background);
   const pm = new THREE.PMREMGenerator(renderer);
@@ -18,13 +18,15 @@ export function studio(renderer, { background = null, floor = true, warm = 1 } =
   key.shadow.mapSize.set(1024, 1024);
   Object.assign(key.shadow.camera, { left: -1.5, right: 1.5, top: 1.5, bottom: -1.5, near: 0.5, far: 12 });
   key.shadow.bias = -0.0005; key.shadow.normalBias = 0.02;
+  // modo estúdio de foto (gerador de imagens): sombra larga e macia
+  if (soft) { key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 14; key.shadow.blurSamples = 24; key.shadow.bias = -0.0002; scene.environmentIntensity = 0.55; }
   const rim = new THREE.DirectionalLight(0xffe2b8, 1.6);
   rim.position.set(2.5, 1.5, -2.5);
   const fill = new THREE.DirectionalLight(0xb9c6d6, 0.35);
   fill.position.set(2, 0.5, 3);
   scene.add(key, rim, fill);
   if (floor) {
-    const f = new THREE.Mesh(new THREE.CircleGeometry(3, 48), new THREE.ShadowMaterial({ opacity: 0.35 }));
+    const f = new THREE.Mesh(new THREE.CircleGeometry(3, 48), new THREE.ShadowMaterial({ opacity: soft ? 0.2 : 0.35 }));
     f.rotation.x = -Math.PI / 2; f.position.y = -0.5; f.receiveShadow = true;
     scene.add(f);
     scene.userData.floor = f;

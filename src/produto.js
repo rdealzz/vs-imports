@@ -4,12 +4,14 @@ import { initBag, bag } from './ui/bag.js';
 import { initAuth } from './ui/auth.js';
 import { cardHTML, priceHTML } from './ui/card.js';
 import { renderFooter } from './ui/footer.js';
+import { initHeader } from './ui/header.js';
 import { mountCalc } from './lib/shipping.js';
 
 const $ = (s) => document.querySelector(s);
 const qs = new URLSearchParams(location.search);
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 renderFooter(undefined, { home: './' });
+initHeader();
 initAuth();
 initBag();
 

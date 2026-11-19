@@ -9,21 +9,30 @@ const ICON = {
   tt: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M16.6 3c.3 2.2 1.6 3.7 3.9 3.9v3a7 7 0 0 1-3.9-1.2v6.1A5.8 5.8 0 1 1 10.8 9v3.1a2.8 2.8 0 1 0 2.8 2.8V3h3Z"/></svg>',
 };
 
+// selos de confiança: traço fino de 1,5px (cor e espessura no CSS)
+const SEAL = {
+  truck: '<svg viewBox="0 0 24 24"><path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>',
+  swap: '<svg viewBox="0 0 24 24"><path d="M4 9h13l-3.5-3.5"/><path d="M20 15H7l3.5 3.5"/></svg>',
+  lock: '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/><path d="M12 14.2v2.3"/></svg>',
+  gem: '<svg viewBox="0 0 24 24"><path d="M6.5 4.5h11l3.5 5-9 10-9-10z"/><path d="M3 9.5h18"/><path d="m9.5 4.5-1.5 5 4 10 4-10-1.5-5"/></svg>',
+};
+
 export function renderFooter(el = document.getElementById('rodape'), { home = '' } = {}) {
   if (!el) return;
+  el.dataset.head = 'dark';
   el.innerHTML = `
   <div class="foot-vip wrap">
     <div class="vip-copy">
-      <h2>Grupo VIP de ofertas</h2>
+      <h2>Grupo VIP <em>de ofertas</em></h2>
       <p>Lançamentos, reposições e promoções relâmpago chegam primeiro no grupo. Entre e fique sabendo antes de todo mundo.</p>
     </div>
     <a class="vip-btn" href="${STORE.vipGroup}" target="_blank" rel="noopener">${ICON.wa}Entrar no grupo VIP</a>
   </div>
   <div class="foot-promise wrap">
-    <div><b>Entregamos para todo o Brasil</b><span>Ou retire no mesmo dia na loja do Capão Raso.</span></div>
-    <div><b>Troca em até 30 dias</b><span>Na loja ou pelo WhatsApp, sem burocracia.</span></div>
-    <div><b>Pagamento seguro</b><span>Pix, cartão em até 3x sem juros e dinheiro na loja.</span></div>
-    <div><b>Linha premium e importada</b><span>Cada peça é conferida antes de ir para a arara.</span></div>
+    <div><span class="seal" aria-hidden="true">${SEAL.truck}</span><b>Entregamos para todo o Brasil</b><span>Ou retire no mesmo dia na loja do Capão Raso.</span></div>
+    <div><span class="seal" aria-hidden="true">${SEAL.swap}</span><b>Troca em até 30 dias</b><span>Na loja ou pelo WhatsApp, sem burocracia.</span></div>
+    <div><span class="seal" aria-hidden="true">${SEAL.lock}</span><b>Pagamento seguro</b><span>Pix, cartão em até 3x sem juros e dinheiro na loja.</span></div>
+    <div><span class="seal" aria-hidden="true">${SEAL.gem}</span><b>Linha premium e importada</b><span>Cada peça é conferida antes de ir para a arara.</span></div>
   </div>
   <div class="foot-main wrap">
     <div class="foot-brand">

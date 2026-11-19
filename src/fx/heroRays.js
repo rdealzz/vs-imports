@@ -20,15 +20,10 @@ float glow(vec2 p){
 float hash(vec2 p){ p = fract(p*vec2(123.34,456.21)); p += dot(p,p+45.32); return fract(p.x*p.y); }
 `;
 
-// só a luz que passa: o letreiro bloqueia e a parede ripada atrás dele deixa
-// a luz sair só entre as ripas verticais (vira um leque de fachos)
+// só a luz que passa: o letreiro bloqueia e a luz escapa em volta dele
+// num halo difuso (sem as faixas verticais da parede ripada)
 const OCC = COMMON + `
-float slats(vec2 p){
-  float asp = uRes.x/uRes.y;
-  float d = abs(fract(p.x*asp*15.) - 0.5);
-  return mix(0.08, 1., smoothstep(0.30, 0.42, d));
-}
-void main(){ o = vec4(vec3(glow(vUv)*(1.-text(vUv))*slats(vUv)*uBright), 1.); }`;
+void main(){ o = vec4(vec3(glow(vUv)*(1.-text(vUv))*uBright*0.42), 1.); }`;
 
 const MAIN = COMMON + `
 uniform sampler2D uOcc; uniform int uSteps;
@@ -52,6 +47,8 @@ void main(){
   float a = clamp(ray*(1.+dust*1.8), 0., 0.9);
   // dourado da marca, mais claro no miolo do facho
   vec3 gold = mix(vec3(0.78,0.60,0.33), vec3(1.0,0.90,0.66), clamp(ray*1.4,0.,1.));
+  // pontilhado de 1/255: some com os "degraus" de cor do degradê
+  a = clamp(a + (hash(gl_FragCoord.xy + 17.3) - 0.5)/255., 0., 0.9);
   o = vec4(gold*a, a); // pré-multiplicado
 }`;
 

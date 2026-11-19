@@ -33,18 +33,20 @@
 
 <main>
   <!-- 1. Capa -->
-  <section class="sign" id="abertura" aria-labelledby="titulo">
+  <section class="sign" id="abertura" aria-labelledby="titulo" data-head="dark">
     <canvas class="sign-rays" aria-hidden="true"></canvas>
     <div class="sign-stage">
       <h1 id="titulo" class="sign-logo"><img src="/brand/vs-logo.svg" alt="VS Imports" width="1000" height="1000" fetchpriority="high"></h1>
       <p class="sign-line">A loja que veste os artistas.</p>
       <div class="sign-acts">
-        <a class="sign-btn" href="#loja">Entrar na loja</a>
-        <a class="sign-link" href="#catalogo">Ver as peças</a>
+        <a class="sign-btn primary" href="#loja"><span class="sign-btn-dot" aria-hidden="true"></span>Entrar na loja</a>
+        <a class="sign-btn ghost" href="#catalogo">Ver as peças<span class="arrow" aria-hidden="true">→</span></a>
       </div>
     </div>
-    <p class="sign-corner left">Capão Raso, Curitiba</p>
-    <p class="sign-corner right" id="sign-hours">Aberto de segunda a sábado, das 10h às 20h</p>
+    <div class="sign-foot">
+      <p class="sign-corner left"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z"/><circle cx="12" cy="10" r="2.3"/></svg>Capão Raso, Curitiba</p>
+      <p class="sign-corner right" id="sign-hours"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Aberto de segunda a sábado, das <span class="tnum">10h às 20h</span></p>
+    </div>
   </section>
 
   <!-- 2. Anel de peças (base do vídeo) que abre para a loja -->
@@ -54,18 +56,17 @@
         <h2 id="pecas-t" class="display"><span>Peças</span><span>para todo</span><span>dia.</span></h2>
         <p class="small">Selecionadas para quem vive de estilo.<br>Feitas para durar na rua.</p>
       </div>
-      <div class="ring-side">
-        <a href="#colecoes" data-filter="camisetas">Camisetas</a>
-        <a href="#colecoes" data-filter="bones">Bonés</a>
-        <a href="#colecoes" data-filter="tenis">Tênis</a>
-        <a href="#colecoes" data-filter="bermudas">Bermudas</a>
-      </div>
+      <nav class="ring-side" aria-label="Categorias">
+        <a href="#catalogo" data-filter="camisetas" data-ring="camisetas" aria-current="true"><span class="num">01</span>Camisetas</a>
+        <a href="#catalogo" data-filter="bones" data-ring="bones"><span class="num">02</span>Bonés</a>
+        <a href="#catalogo" data-filter="tenis" data-ring="tenis"><span class="num">03</span>Tênis</a>
+        <a href="#catalogo" data-filter="bermudas" data-ring="bermudas"><span class="num">04</span>Bermudas</a>
+      </nav>
       <div class="ring" aria-hidden="true">
-        <div class="ring-hanger"></div>
         <img class="ring-center" src="/img/anel-centro.webp" alt="" width="800" height="1000">
         <div class="ring-orbit"></div>
       </div>
-      <div class="ring-expand" aria-hidden="true">
+      <div class="ring-expand" data-head="dark">
         <picture>
           <source media="(max-aspect-ratio: 1/1)" srcset="/img/loja-entrada-m.webp">
           <img src="/img/loja-entrada.webp" alt="" width="1600" height="1000">
@@ -73,6 +74,7 @@
         <div class="expand-copy">
           <p class="display">Montada<br>para ser<br>vista.</p>
           <p class="small">Preto fosco, luz quente 3000K e camiseta em primeiro plano. Agora dá para entrar daqui.</p>
+          <a class="expand-cta" href="#loja"><span class="enter-dot" aria-hidden="true"></span>Explorar a Loja 3D</a>
         </div>
       </div>
       <p class="ring-foot small">Loja física no Capão Raso, Curitiba</p>

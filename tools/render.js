@@ -1,5 +1,7 @@
 // Gera as imagens provisórias (cards, fotos de clima, coleções e loja)
 // renderizando os modelos 3D. Rode com `npm run assets`.
+// Estúdio de foto: render em 2x reduzido (bordas lisas), sombra macia (VSM),
+// piso encostado na peça e sombra de contato, para não parecer render cru.
 import * as THREE from 'three';
 import { PRODUCTS, CATEGORIES } from '../src/data/products.js';
 import { makeProduct } from '../src/three/models.js';
@@ -10,13 +12,34 @@ const out = [];
 const only = new URLSearchParams(location.search).get('only');
 await document.fonts.load('italic 900 100px "Archivo"'); await document.fonts.load('800 100px "Archivo"'); await document.fonts.load('600 100px "Archivo"');
 
+const SS = 2; // supersampling
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(1);
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.08;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.VSMShadowMap;
+
+// sombra de contato: um degradê radial bem suave colado no piso, embaixo da peça
+const contactTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const x = c.getContext('2d'); const g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+  g.addColorStop(0, 'rgba(28,22,14,.55)'); g.addColorStop(0.35, 'rgba(28,22,14,.28)'); g.addColorStop(0.7, 'rgba(28,22,14,.08)'); g.addColorStop(1, 'rgba(28,22,14,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+function ground(scene, objects) {
+  const box = new THREE.Box3(); objects.forEach((o) => box.expandByObject(o));
+  const y = box.min.y - 0.002;
+  if (scene.userData.floor) scene.userData.floor.position.y = y;
+  objects.forEach((o) => {
+    const b = new THREE.Box3().setFromObject(o), s = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: contactTex, transparent: true, depthWrite: false, toneMapped: false }));
+    m.rotation.x = -Math.PI / 2; m.position.set(c.x, y + 0.001, c.z); m.scale.set(s.x * 1.25, Math.max(s.z, s.x * 0.45) * 1.25, 1); m.renderOrder = -1;
+    scene.add(m);
+  });
+}
 
 function shot(scene, camera, w, h, bg) {
-  renderer.setSize(w, h, false);
+  renderer.setSize(w * SS, h * SS, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
   renderer.setClearColor(0x000000, 0);
   renderer.shadowMap.needsUpdate = true;
@@ -24,24 +47,28 @@ function shot(scene, camera, w, h, bg) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const x = c.getContext('2d');
   if (bg) bg(x, w, h);
-  x.drawImage(renderer.domElement, 0, 0);
-  if (bg) { // grão leve, para não parecer render liso
+  x.imageSmoothingQuality = 'high';
+  x.drawImage(renderer.domElement, 0, 0, w, h);
+  if (bg) { // vinheta suave + grão leve (sem faixas no degradê)
+    const v = x.createRadialGradient(w / 2, h * 0.45, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.78);
+    v.addColorStop(0, 'rgba(60,46,28,0)'); v.addColorStop(1, 'rgba(60,46,28,.16)'); x.fillStyle = v; x.fillRect(0, 0, w, h);
     const id = x.getImageData(0, 0, w, h), d = id.data;
-    for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - 0.5) * 7; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+    for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - 0.5) * 6; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
     x.putImageData(id, 0, 0);
   }
-  return c.toDataURL('image/webp', 0.86);
+  return c.toDataURL('image/webp', 0.88);
 }
-const darkBg = (x, w, h) => { const g = x.createRadialGradient(w * 0.45, h * 0.38, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.75); g.addColorStop(0, '#F1EDE6'); g.addColorStop(0.6, '#E0DAD0'); g.addColorStop(1, '#CEC6B9'); x.fillStyle = g; x.fillRect(0, 0, w, h); };
+// fundo claro editorial (#F4F1EA -> #E4DDD0), luz vindo de cima à esquerda
+const lightBg = (x, w, h) => { const g = x.createRadialGradient(w * 0.42, h * 0.32, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.8); g.addColorStop(0, '#F7F4EE'); g.addColorStop(0.55, '#ECE6DB'); g.addColorStop(1, '#DCD3C4'); x.fillStyle = g; x.fillRect(0, 0, w, h); };
 const sandBg = (x, w, h) => { const g = x.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#d9c7a8'); g.addColorStop(0.5, '#b9946a'); g.addColorStop(1, '#5a3f28'); x.fillStyle = g; x.fillRect(0, 0, w, h); const r = x.createRadialGradient(w * 0.25, h * 0.2, 0, w * 0.25, h * 0.2, w * 0.9); r.addColorStop(0, 'rgba(255,236,200,.55)'); r.addColorStop(1, 'rgba(255,236,200,0)'); x.fillStyle = r; x.fillRect(0, 0, w, h); };
 
 function productScene(p, ci, { pedestal = false } = {}) {
-  const scene = studio(renderer, { floor: !pedestal, warm: pedestal ? 1.3 : 1 });
+  const scene = studio(renderer, { floor: !pedestal, warm: pedestal ? 1.3 : 1, soft: true });
   const g = makeProduct(p, ci, { hanger: false });
   g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
   scene.add(g);
   if (pedestal) {
-    const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.8, 0.5, 48), new THREE.MeshStandardMaterial({ color: 0xc9b08a, roughness: 0.95 }));
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.8, 0.5, 64), new THREE.MeshStandardMaterial({ color: 0xc9b08a, roughness: 0.95 }));
     ped.position.y = -0.75; ped.receiveShadow = true; ped.castShadow = true; scene.add(ped);
   }
   return { scene, g };
@@ -53,8 +80,9 @@ for (const p of PRODUCTS) {
   for (let ci = 0; ci < p.colors.length; ci++) {
     const { scene, g } = productScene(p, ci);
     g.rotation.y = p.model === 'shoe' ? -0.55 : p.model === 'cap' ? -0.6 : -0.32;
+    g.updateMatrixWorld(true); ground(scene, [g]);
     cam.position.set(0, 0.3, 3.7); cam.lookAt(0, 0.02, 0);
-    out.push({ name: ci ? `${p.id}-card-${ci}` : `${p.id}-card`, data: shot(scene, cam, 800, 1000, darkBg) });
+    out.push({ name: ci ? `${p.id}-card-${ci}` : `${p.id}-card`, data: shot(scene, cam, 800, 1000, lightBg) });
   }
   const m = productScene(p, 0, { pedestal: true });
   m.g.rotation.y = p.model === 'shoe' ? 0.5 : -0.4;
@@ -62,19 +90,23 @@ for (const p of PRODUCTS) {
   out.push({ name: `${p.id}-mood`, data: shot(m.scene, cam, 900, 1200, sandBg) });
   document.getElementById('s').textContent = 'Produtos: ' + out.length;
 }
-// coleções: três peças da categoria lado a lado
+// coleções: três peças da categoria lado a lado, todas apoiadas no mesmo piso
 for (const c of CATEGORIES) {
   if (only && only !== 'cat') continue;
   const list = PRODUCTS.filter((p) => p.cat === c.id).slice(0, 3);
-  const scene = studio(renderer, { floor: true });
-  list.forEach((p, i) => { const g = makeProduct(p, 0, { hanger: false }); g.position.x = (i - (list.length - 1) / 2) * 1.05; g.position.z = -Math.abs(i - 1) * 0.3; g.rotation.y = -0.4 + i * 0.25; g.scale.multiplyScalar(0.8); g.traverse((m) => { if (m.isMesh) m.castShadow = true; }); scene.add(g); });
-  cam.position.set(0, 0.5, 4.6); cam.lookAt(0, -0.05, 0);
-  out.push({ name: `cat-${c.id}`, data: shot(scene, cam, 1000, 1000, darkBg) });
+  const scene = studio(renderer, { floor: true, soft: true });
+  const gs = list.map((p, i) => { const g = makeProduct(p, 0, { hanger: false }); g.position.x = (i - (list.length - 1) / 2) * 1.0; g.position.z = -Math.abs(i - 1) * 0.35; g.rotation.y = -0.4 + i * 0.25; g.scale.multiplyScalar(0.78); g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); scene.add(g); g.updateMatrixWorld(true); return g; });
+  // cada peça encostada no piso (bonés e tênis não "flutuam")
+  const floorY = Math.min(...gs.map((g) => new THREE.Box3().setFromObject(g).min.y));
+  gs.forEach((g) => { const b = new THREE.Box3().setFromObject(g); g.position.y += floorY - b.min.y; g.updateMatrixWorld(true); });
+  ground(scene, gs);
+  cam.position.set(0, 0.55, 4.5); cam.lookAt(0, -0.08, 0);
+  out.push({ name: `cat-${c.id}`, data: shot(scene, cam, 1000, 1000, lightBg) });
 }
 // camiseta do centro do anel (fundo transparente)
 if (!only) {
   const p = PRODUCTS[0];
-  const scene = studio(renderer, { floor: false });
+  const scene = studio(renderer, { floor: false, soft: true });
   const g = makeProduct(p, 0, { hanger: true }); g.rotation.y = -0.15; scene.add(g);
   cam.position.set(0, 0.15, 3.4); cam.lookAt(0, 0.1, 0);
   out.push({ name: 'anel-centro', data: shot(scene, cam, 800, 1000, null) });
@@ -82,7 +114,7 @@ if (!only) {
 // loja
 if (!only || only === 'loja') {
   const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:0;top:0;width:1600px;height:1000px;visibility:hidden'; document.body.appendChild(host);
-  const store = new Store3D(host, { capture: true, view: 'entrada' });
+  const store = await new Store3D(host, { capture: true, view: 'entrada' }).ready;
   await new Promise((r) => { const prev = store.M.onLogo; store.M.onLogo = () => { prev?.(); r(); }; setTimeout(r, 4000); });
   const snap = (name, w, h, view) => {
     host.style.width = w + 'px'; host.style.height = h + 'px'; store.resize(); store.setView(view, 0); store.renderOnce();

@@ -2,10 +2,12 @@ import { STORE } from './data/products.js';
 import { initBag } from './ui/bag.js';
 import { initAuth } from './ui/auth.js';
 import { renderFooter } from './ui/footer.js';
+import { initHeader } from './ui/header.js';
 
 initAuth();
 initBag();
 renderFooter(undefined, { home: './' });
+initHeader();
 document.getElementById('upd').textContent = '18/11/2026';
 document.getElementById('contato').innerHTML = `
   <h2>Fale com a gente</h2>

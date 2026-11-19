@@ -8,6 +8,7 @@ import { initAuth, auth, openAuth } from './ui/auth.js';
 import { bag } from './ui/bag.js';
 import { listAddresses, formHTML, bindForm, addressLine } from './ui/addresses.js';
 import { renderFooter } from './ui/footer.js';
+import { initHeader } from './ui/header.js';
 import { quote, freeBarHTML } from './lib/shipping.js';
 import { orderPdf, pdfName, downloadBlob, uploadPdf, waOrderLink } from './lib/orderPdf.js';
 
@@ -166,6 +167,7 @@ document.addEventListener('click', (e) => {
 $('#go').addEventListener('click', submit);
 
 renderFooter(undefined, { home: './' });
+initHeader();
 catalog = await loadCatalog();
 refresh();
 initAuth().then(() => auth.on(() => onAuth()));

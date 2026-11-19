@@ -7,6 +7,7 @@ import { initAuth } from './ui/auth.js';
 import { loadCatalog, LOCAL_CATALOG } from './data/catalog.js';
 import { cardHTML, productUrl } from './ui/card.js';
 import { renderFooter } from './ui/footer.js';
+import { initHeader } from './ui/header.js';
 import { reduceMotion, isMobile } from './three/perf.js';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -36,13 +37,13 @@ let lastY = 0;
 const onScroll = () => {
   const y = scrollY;
   head.classList.toggle('solid', y > 8);
-  head.classList.toggle('on-dark', y < innerHeight * 0.9); // sobre a fachada escura
   head.classList.toggle('hide', y > innerHeight * 1.2 && y > lastY + 2 && !document.documentElement.style.overflow);
   if (y < lastY - 2) head.classList.remove('hide');
   lastY = y;
 };
 addEventListener('scroll', onScroll, { passive: true });
 onScroll();
+initHeader();
 
 /* ---------------- 1. capa ---------------- */
 document.body.classList.add('ready');
@@ -54,14 +55,33 @@ import('./fx/heroRays.js')
 
 /* ---------------- 2. anel de peças ---------------- */
 const orbit = $('.ring-orbit');
-const tileProducts = PRODUCTS.slice(0, 10);
+// 10 peças intercaladas entre as 4 linhas (todas aparecem no anel)
+const tileProducts = (() => {
+  const by = CATEGORIES.map((c) => PRODUCTS.filter((p) => p.cat === c.id)), out = [];
+  for (let k = 0; out.length < 10 && k < 6; k++) by.forEach((l) => { if (l[k] && out.length < 10) out.push(l[k]); });
+  return out;
+})();
 const tiles = tileProducts.map((p, i) => {
   const t = document.createElement('div');
-  t.className = 'tile';
+  t.className = 'tile'; t.dataset.cat = p.cat;
   t.innerHTML = `<img src="${img(p.id, 'card-sm')}" alt="" decoding="async" width="480" height="600">`;
   orbit.appendChild(t);
   return { el: t, a: (i / tileProducts.length) * Math.PI * 2 };
 });
+// seletor de categorias: a linha ativa acende as peças dela no anel
+const ringLinks = $$('[data-ring]');
+let ringCat = 'camisetas', ringAuto = !reduceMotion, ringTimer = 0;
+const setRing = (cat) => {
+  ringCat = cat;
+  ringLinks.forEach((a) => (a.dataset.ring === cat ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current')));
+  tiles.forEach((t) => { const on = t.el.dataset.cat === cat; t.el.classList.toggle('on', on); t.el.classList.toggle('dim', !on); });
+};
+ringLinks.forEach((a) => {
+  const pick = () => { ringAuto = false; setRing(a.dataset.ring); };
+  a.addEventListener('pointerenter', pick); a.addEventListener('focus', pick);
+});
+$('.ring-side').addEventListener('pointerleave', () => { ringAuto = !reduceMotion; });
+setRing(ringCat);
 const ringState = { spin: 0, spread: 1, scale: 1, fade: 1 };
 let ringVisible = false;
 new IntersectionObserver(([e]) => (ringVisible = e.isIntersecting)).observe($('.ring-pin'));
@@ -75,7 +95,12 @@ const drawRing = () => {
   });
 };
 drawRing();
-if (!reduceMotion) gsap.ticker.add((_, dt) => { if (!ringVisible) return; ringState.spin += dt * 0.00012; drawRing(); });
+if (!reduceMotion) gsap.ticker.add((_, dt) => {
+  if (!ringVisible) return;
+  ringState.spin += dt * 0.00012; drawRing();
+  // troca a linha em destaque sozinha, até a pessoa escolher uma
+  if (ringAuto && (ringTimer += dt) > 2600) { ringTimer = 0; const ids = ringLinks.map((a) => a.dataset.ring); setRing(ids[(ids.indexOf(ringCat) + 1) % ids.length]); }
+});
 
 const mm = gsap.matchMedia();
 mm.add('(prefers-reduced-motion: no-preference)', () => {
