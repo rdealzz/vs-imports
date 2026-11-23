@@ -4,88 +4,153 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>VS Imports | a loja que veste os artistas</title>
-<meta name="description" content="Camisetas, bonés, tênis e bermudas. Loja física no Capão Raso, Curitiba, e loja 3D online para passear pelas araras.">
-<meta name="theme-color" content="#0B0B0B">
+<meta name="description" content="Camisetas, bonés, tênis e bermudas, linha premium e importada. Loja física no Capão Raso, Curitiba, e entrega para todo o Brasil. Frete grátis acima de R$ 349,90.">
+<meta name="theme-color" content="#0B0A08">
 <link rel="icon" href="/brand/vs-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <meta property="og:image" content="/brand/vs-logo-4096.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..800&display=swap" rel="stylesheet">
-<link rel="preload" as="image" href="/brand/vs-logo.svg" fetchpriority="high">
 <link rel="stylesheet" href="/src/styles/base.css">
 <link rel="stylesheet" href="/src/styles/home.css">
+<link rel="stylesheet" href="/src/styles/shop.css">
 </head>
-<body class="home">
+<body class="home shop">
+<a class="skip" href="#mais-vendidos">Pular para os produtos</a>
 
-<a class="skip" href="#loja">Pular para a loja 3D</a>
+<!-- barra de avisos -->
+<div class="adbar" role="region" aria-label="Avisos da loja">
+  <button class="adbar-arrow" type="button" data-ad="-1" aria-label="Aviso anterior">‹</button>
+  <ul class="adbar-list" id="adbar">
+    <li class="on">Frete grátis acima de <b>R$ 349,90</b></li>
+    <li><b>5% OFF</b> na primeira compra pelo site</li>
+    <li>Cartão em até <b>3x sem juros</b> · Pix</li>
+    <li>Retire no <b>mesmo dia</b> no Capão Raso</li>
+  </ul>
+  <button class="adbar-arrow" type="button" data-ad="1" aria-label="Próximo aviso">›</button>
+</div>
 
-<header class="site-head" id="top">
-  <a class="brand" href="./" aria-label="VS Imports, início"><img src="/brand/vs-icon.svg" alt="" width="40" height="40"><span>IMPORTS</span></a>
-  <nav class="site-nav" aria-label="Principal">
+<!-- cabeçalho da loja -->
+<header class="site-head shop-head" id="top" data-head="dark">
+  <div class="sh-row">
+    <div class="sh-left">
+      <button class="sh-icon sh-menu" type="button" id="menu-open" aria-label="Abrir menu" aria-expanded="false" aria-controls="drawer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <button class="sh-icon" type="button" id="search-open" aria-label="Buscar produtos" aria-expanded="false" aria-controls="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+      </button>
+    </div>
+    <a class="sh-logo" href="./" aria-label="VS Imports, início"><img src="/brand/vs-logo.svg" alt="VS Imports" width="64" height="64"></a>
+    <div class="sh-right">
+      <button class="bag-btn sh-bag" type="button" data-bag-open aria-label="Abrir sacola">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V7a3 3 0 0 1 6 0v1"/></svg>
+        <b data-bag-count>0</b>
+      </button>
+    </div>
+  </div>
+  <nav class="sh-nav site-nav" aria-label="Principal">
+    <a href="./">Início</a>
+    <div class="sh-drop">
+      <a href="#catalogo" class="sh-drop-btn" aria-haspopup="true" aria-expanded="false">Produtos <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></a>
+      <div class="sh-drop-panel" id="drop-cats"></div>
+    </div>
     <a href="#loja">Loja 3D</a>
-    <a href="#colecoes">Coleções</a>
-    <a href="#catalogo">Catálogo</a>
-    <a href="#visite">Endereço</a>
+    <a href="#" id="nav-whats" target="_blank" rel="noopener">WhatsApp</a>
   </nav>
-  <button class="bag-btn" type="button" data-bag-open aria-label="Abrir sacola">Sacola <b data-bag-count>0</b></button>
+  <div class="sh-search" id="search" hidden>
+    <form class="sh-search-form" role="search" onsubmit="return false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+      <input id="search-q" type="search" placeholder="O que você está buscando?" autocomplete="off" aria-label="Buscar produtos">
+      <button class="sh-icon" type="button" id="search-close" aria-label="Fechar busca">×</button>
+    </form>
+    <ul class="sh-results" id="search-results"></ul>
+  </div>
 </header>
 
-<main>
-  <!-- 1. Capa -->
-  <section class="sign" id="abertura" aria-labelledby="titulo" data-head="dark">
-    <canvas class="sign-rays" aria-hidden="true"></canvas>
-    <div class="sign-stage">
-      <h1 id="titulo" class="sign-logo"><img src="/brand/vs-logo.svg" alt="VS Imports" width="1000" height="1000" fetchpriority="high"></h1>
-      <p class="sign-line">A loja que veste os artistas.</p>
-      <div class="sign-acts">
-        <a class="sign-btn primary" href="#loja"><span class="sign-btn-dot" aria-hidden="true"></span>Entrar na loja</a>
-        <a class="sign-btn ghost" href="#catalogo">Ver as peças<span class="arrow" aria-hidden="true">→</span></a>
-      </div>
-    </div>
-    <div class="sign-foot">
-      <p class="sign-corner left"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z"/><circle cx="12" cy="10" r="2.3"/></svg>Capão Raso, Curitiba</p>
-      <p class="sign-corner right" id="sign-hours"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Aberto de segunda a sábado, das <span class="tnum">10h às 20h</span></p>
-    </div>
-  </section>
+<!-- menu do celular -->
+<div class="drawer" id="drawer" hidden>
+  <nav class="drawer-panel" aria-label="Menu">
+    <div class="drawer-top"><img src="/brand/vs-logo.svg" alt="" width="48" height="48"><button class="sh-icon" type="button" id="menu-close" aria-label="Fechar menu">×</button></div>
+    <a href="./">Início</a>
+    <p class="drawer-h">Produtos</p>
+    <div id="drawer-cats"></div>
+    <a href="#loja">Loja 3D</a>
+    <a href="#" id="drawer-whats" target="_blank" rel="noopener">WhatsApp</a>
+    <a href="#visite">Endereço e horário</a>
+  </nav>
+</div>
 
-  <!-- 2. Anel de peças (base do vídeo) que abre para a loja -->
-  <section class="ring-hero" id="pecas" aria-labelledby="pecas-t">
-    <div class="ring-pin">
-      <div class="ring-text">
-        <h2 id="pecas-t" class="display"><span>Peças</span><span>para todo</span><span>dia.</span></h2>
-        <p class="small">Selecionadas para quem vive de estilo.<br>Feitas para durar na rua.</p>
-      </div>
-      <nav class="ring-side" aria-label="Categorias">
-        <a href="#catalogo" data-filter="camisetas" data-ring="camisetas" aria-current="true"><span class="num">01</span>Camisetas</a>
-        <a href="#catalogo" data-filter="bones" data-ring="bones"><span class="num">02</span>Bonés</a>
-        <a href="#catalogo" data-filter="tenis" data-ring="tenis"><span class="num">03</span>Tênis</a>
-        <a href="#catalogo" data-filter="bermudas" data-ring="bermudas"><span class="num">04</span>Bermudas</a>
-      </nav>
-      <div class="ring" aria-hidden="true">
-        <img class="ring-center" src="/img/anel-centro.webp" alt="" width="800" height="1000">
-        <div class="ring-orbit"></div>
-      </div>
-      <div class="ring-expand" data-head="dark">
-        <picture>
-          <source media="(max-aspect-ratio: 1/1)" srcset="/img/loja-entrada-m.webp">
-          <img src="/img/loja-entrada.webp" alt="" width="1600" height="1000">
-        </picture>
-        <div class="expand-copy">
-          <p class="display">Montada<br>para ser<br>vista.</p>
-          <p class="small">Preto fosco, luz quente 3000K e camiseta em primeiro plano. Agora dá para entrar daqui.</p>
-          <a class="expand-cta" href="#loja"><span class="enter-dot" aria-hidden="true"></span>Explorar a Loja 3D</a>
+<main class="shop-main" data-head="dark">
+  <h1 class="visually-hidden">VS Imports: a loja que veste os artistas</h1>
+
+  <!-- 1. carrossel de banners -->
+  <section class="slider" id="slider" aria-roledescription="carrossel" aria-label="Destaques">
+    <div class="slides" id="slides">
+      <article class="slide s-brand" aria-roledescription="slide" aria-label="1 de 3">
+        <img class="slide-bg" src="/img/loja-geral.webp" alt="" width="1600" height="1000" fetchpriority="high">
+        <div class="slide-copy">
+          <img class="slide-logo" src="/brand/vs-logo.svg" alt="" width="120" height="120">
+          <p class="slide-kicker">Linha premium e importada</p>
+          <h2>A loja que veste<br><em>os artistas.</em></h2>
+          <a class="btn-gold" href="#mais-vendidos">Ver as peças</a>
         </div>
-      </div>
-      <p class="ring-foot small">Loja física no Capão Raso, Curitiba</p>
+      </article>
+      <article class="slide s-ship" aria-roledescription="slide" aria-label="2 de 3">
+        <div class="slide-copy">
+          <svg class="slide-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>
+          <p class="slide-kicker">Entregamos para todo o Brasil</p>
+          <h2>Frete grátis<br><em>acima de R$ 349,90</em></h2>
+          <a class="btn-gold" href="#catalogo">Aproveitar</a>
+        </div>
+        <div class="slide-pics" aria-hidden="true"><img src="/img/tenis-runner-card.webp" alt="" width="800" height="1000"><img src="/img/camiseta-artistas-card.webp" alt="" width="800" height="1000"><img src="/img/bone-trucker-card.webp" alt="" width="800" height="1000"></div>
+      </article>
+      <article class="slide s-first" aria-roledescription="slide" aria-label="3 de 3">
+        <img class="slide-bg" src="/img/capa-loja.webp" alt="" width="1500" height="1900">
+        <div class="slide-copy">
+          <p class="slide-kicker">Primeira compra pelo site</p>
+          <h2><em>5% OFF</em><br>criando sua conta</h2>
+          <button class="btn-gold" type="button" data-login>Criar conta</button>
+        </div>
+      </article>
     </div>
+    <button class="slider-arrow prev" type="button" data-sl="-1" aria-label="Banner anterior">‹</button>
+    <button class="slider-arrow next" type="button" data-sl="1" aria-label="Próximo banner">›</button>
+    <div class="slider-dots" id="slider-dots" role="tablist" aria-label="Escolher banner"></div>
   </section>
 
-  <!-- 3. Loja 3D -->
+  <!-- 2. categorias em círculo -->
+  <section class="cats" aria-label="Categorias">
+    <ul class="cats-row" id="cats"></ul>
+  </section>
+
+  <!-- 3. faixa da loja -->
+  <section class="welcome">
+    <h2>Loja física no <em>Capão Raso</em></h2>
+    <p>Retire no mesmo dia em Curitiba. Frete grátis pra todo o Brasil acima de R$ 349,90.</p>
+  </section>
+
+  <!-- 4. prateleiras -->
+  <section class="shelf" id="mais-vendidos" aria-labelledby="sh1"><h2 id="sh1" class="shelf-t">Mais vendidos</h2><div class="shelf-wrap"><ul class="shelf-row" data-shelf="mais"></ul></div></section>
+
+  <section class="duo" aria-label="Destaques da loja">
+    <a class="duo-card d-3d" href="#loja">
+      <img src="/img/loja-estante.webp" alt="" loading="lazy" width="1200" height="1200">
+      <span class="duo-copy"><small>Loja 3D</small><b>Passeie pela loja<br>antes de vir</b><i>Entrar na loja →</i></span>
+    </a>
+    <a class="duo-card d-vip" href="#" id="duo-vip" target="_blank" rel="noopener">
+      <img src="/img/loja-logo.webp" alt="" loading="lazy" width="1200" height="1200">
+      <span class="duo-copy"><small>Grupo VIP de ofertas</small><b>Lançamentos e promoções<br>antes de todo mundo</b><i>Entrar no grupo →</i></span>
+    </a>
+  </section>
+
+  <section class="shelf" id="promocoes" aria-labelledby="sh2" hidden><h2 id="sh2" class="shelf-t">Promoções</h2><div class="shelf-wrap"><ul class="shelf-row" data-shelf="promo"></ul></div></section>
+
+  <!-- 5. loja 3D -->
   <section class="store" id="loja" aria-labelledby="loja-t">
     <div class="store-head wrap">
-      <p class="eyebrow">Loja 3D</p>
-      <h2 id="loja-t" class="display">Passeie pela loja<br>antes de vir.</h2>
+      <h2 id="loja-t" class="shelf-t">Conheça a loja em 3D</h2>
       <p>A mesma disposição da loja física. Entre, olhe em volta e toque numa peça para abrir a página dela.</p>
     </div>
     <div class="store-backdrop" id="store-backdrop" aria-hidden="true"></div>
@@ -120,42 +185,26 @@
     <ul class="store-list wrap" id="store-list" aria-label="Peças na loja"></ul>
   </section>
 
-  <!-- 4. Coleções -->
-  <section class="collections wrap" id="colecoes" aria-labelledby="col-t">
-    <div class="sec-head">
-      <h2 id="col-t" class="display">Quatro linhas.<br>Um estilo só.</h2>
-      <p>Cada peça foi escolhida para combinar com as outras. Monte o conjunto inteiro sem pensar muito.</p>
-    </div>
-    <div class="col-grid" id="col-grid"></div>
+  <section class="brandline" aria-label="Sobre a VS Imports">
+    <p>A <em>VS</em> é a loja que veste os artistas</p>
+    <span>Camisetas · Bonés · Tênis · Bermudas</span>
   </section>
 
-  <!-- 5. Destaques: produto girando, troca no scroll -->
-  <section class="feature" id="destaques" aria-labelledby="dest-t">
-    <h2 id="dest-t" class="visually-hidden">Destaques</h2>
-    <div class="feature-pin">
-      <div class="feature-photo" id="feature-photo"></div>
-      <div class="feature-3d">
-        <div class="feature-canvas" id="feature-canvas" aria-hidden="true"></div>
-        <p class="feature-label small">Role para ver a próxima</p>
-        <div class="feature-info" id="feature-info"></div>
-      </div>
-    </div>
-  </section>
+  <section class="shelf" id="lancamentos" aria-labelledby="sh3"><h2 id="sh3" class="shelf-t">Lançamentos</h2><div class="shelf-wrap"><ul class="shelf-row" data-shelf="novos"></ul></div></section>
 
-  <!-- 8. Catálogo -->
+  <!-- 6. todos os produtos -->
   <section class="catalog wrap" id="catalogo" aria-labelledby="cat-t">
-    <div class="sec-head">
-      <h2 id="cat-t" class="display">Catálogo</h2>
+    <div class="cat-head">
+      <h2 id="cat-t" class="shelf-t">Todos os produtos</h2>
       <div class="filters" role="group" aria-label="Filtrar por linha" id="filters"></div>
     </div>
-    <ul class="grid" id="grid"></ul>
+    <ul class="pgrid" id="grid"></ul>
   </section>
 
-  <!-- 9. Endereço -->
+  <!-- 7. endereço -->
   <section class="visit wrap" id="visite" aria-labelledby="vis-t">
     <div class="visit-copy">
-      <p class="eyebrow">Loja física</p>
-      <h2 id="vis-t" class="display">Venha<br>experimentar.</h2>
+      <h2 id="vis-t" class="shelf-t">Venha experimentar</h2>
       <dl class="visit-info" id="visit-info"></dl>
     </div>
     <figure class="map" id="map">
@@ -178,6 +227,8 @@
     </footer>
   </div>
 </aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script type="module" src="/src/main.js"></script>
 </body>
