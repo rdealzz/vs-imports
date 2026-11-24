@@ -30,6 +30,8 @@ export async function loadCatalog({ includeInactive = false, fresh = false } = {
         print: r.print, featured: r.featured, stock: r.stock,
         available: a ? a.available : r.stock == null || r.stock > 0,
         photos: (r.product_images || []).sort((x, y) => x.position - y.position).map((i) => photoUrl(i.path)),
+        // versões leves (480 px) das 2 primeiras fotos, para cards e miniaturas
+        thumbs: (r.product_images || []).sort((x, y) => x.position - y.position).map((i) => photoUrl(/\/foto-[01]\.webp$/.test(i.path) ? i.path.replace('.webp', '-sm.webp') : i.path)),
         variants: r.product_variants || [],
         hasLocalImages: !!l,
       };

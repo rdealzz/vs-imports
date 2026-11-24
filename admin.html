@@ -29,6 +29,7 @@
     <nav class="adm-nav" id="nav" aria-label="Painel">
       <button data-go="resumo" aria-current="page"><i>◆</i><span>Resumo</span></button>
       <button data-go="vender"><i>＋</i><span>Vender</span></button>
+      <button data-go="etiquetas"><i>▥</i><span>Etiquetas</span></button>
       <button data-go="pedidos"><i>≡</i><span>Pedidos</span></button>
       <button data-go="produtos"><i>▦</i><span>Produtos</span></button>
       <button data-go="compras" data-owner><i>↓</i><span>Compras</span></button>
@@ -102,11 +103,38 @@
       <div class="table-wrap"><table class="tbl" id="c-table"></table></div>
     </section>
 
+    <!-- ETIQUETAS (código de barras) -->
+    <section class="view" id="v-etiquetas" hidden>
+      <header class="v-head">
+        <h1>Etiquetas</h1>
+        <div class="filters-row">
+          <input class="search" id="lb-q" type="search" placeholder="Buscar peça…">
+          <label class="lb-chk"><input type="checkbox" id="lb-stock" checked> Só com estoque</label>
+          <select id="lb-size" aria-label="Tamanho da etiqueta"><option value="50x30">Etiqueta 50 × 30 mm (térmica)</option><option value="40x25">Etiqueta 40 × 25 mm (térmica)</option><option value="a4">Folha A4 (3 colunas)</option></select>
+        </div>
+      </header>
+      <div class="lb-bar">
+        <button class="pill sm" type="button" id="lb-all">Marcar todas</button>
+        <button class="pill sm" type="button" id="lb-none">Limpar</button>
+        <button class="pill sm" type="button" id="lb-qty-stock">Quantidade = estoque</button>
+        <button class="pill sm" type="button" id="lb-qty-one">Quantidade = 1</button>
+        <span class="lb-count" id="lb-count"></span>
+        <button class="pill solid" type="button" id="lb-print">Imprimir etiquetas</button>
+      </div>
+      <div class="table-wrap"><table class="tbl lb-tbl" id="lb-table"></table></div>
+    </section>
+
     <!-- VENDER (PDV) -->
     <section class="view" id="v-vender" hidden>
       <header class="v-head"><h1>Nova venda</h1></header>
       <div class="pdv">
         <div class="pdv-pick">
+          <form class="scan" id="scan" autocomplete="off">
+            <span class="scan-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3M7 7v10M10 7v10M13 7v10M16 7v10"/></svg></span>
+            <input id="scan-code" inputmode="numeric" placeholder="Passe o leitor ou digite o código de barras" aria-label="Código de barras">
+            <button class="pill solid sm" type="submit">Adicionar</button>
+          </form>
+          <p class="scan-msg" id="scan-msg" role="status" aria-live="polite"></p>
           <input class="search" id="pdv-q" type="search" placeholder="Buscar peça…" autocomplete="off">
           <ul class="pdv-grid" id="pdv-grid"></ul>
         </div>

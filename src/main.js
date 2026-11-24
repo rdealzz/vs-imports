@@ -70,19 +70,19 @@ function renderHeroLive(list) {
   const pick = (cats, n) => { const out = []; for (const c of cats) { const p = real.find((x) => x.cat === c && !out.includes(x)); if (p) out.push(p); } for (const p of real) { if (out.length >= n) break; if (!out.includes(p)) out.push(p); } return out.slice(0, n); };
   // frete grátis: leque de peças com preço
   const fan = pick(['calcados', 'camisetas', 'bones', 'bermudas', 'polos'], 5);
-  $('#ship-fan').innerHTML = fan.map((p, i) => `<figure class="fan-card f${i}" style="--i:${i}"><img src="${p.photos[0]}" alt="" loading="lazy" width="600" height="750"><figcaption><span>${esc(p.name)}</span><b>${brl(p.finalPrice)}</b></figcaption></figure>`).join('');
+  $('#ship-fan').innerHTML = fan.map((p, i) => `<figure class="fan-card f${i}" style="--i:${i}"><img src="${p.thumbs[0]}" alt="" loading="lazy" width="480" height="600"><figcaption><span>${esc(p.name)}</span><b>${brl(p.finalPrice)}</b></figcaption></figure>`).join('');
   // 5% OFF: parede de fotos em colunas que deslizam
   const cols = $$('#first-wall .fw-col');
   const pics = real.slice(0, 32);
-  cols.forEach((c, k) => { const mine = pics.filter((_, i) => i % cols.length === k); c.innerHTML = [...mine, ...mine].map((p) => `<img src="${p.photos[0]}" alt="" loading="lazy" width="400" height="500">`).join(''); });
+  cols.forEach((c, k) => { const mine = pics.filter((_, i) => i % cols.length === k); c.innerHTML = [...mine, ...mine].map((p) => `<img src="${p.thumbs[0]}" alt="" loading="lazy" width="400" height="500">`).join(''); });
   // cards: Loja 3D e Grupo VIP
   $('#d2-pecas').textContent = list.length;
-  $('#d2-thumbs').innerHTML = pick(['camisetas', 'bermudas', 'calcados', 'bones', 'polos', 'acessorios'], 6).map((p) => `<img src="${p.photos[0]}" alt="" loading="lazy" width="80" height="100">`).join('');
+  $('#d2-thumbs').innerHTML = pick(['camisetas', 'bermudas', 'calcados', 'bones', 'polos', 'acessorios'], 6).map((p) => `<img src="${p.thumbs[0]}" alt="" loading="lazy" width="80" height="100">`).join('');
   const promos = real.filter((p) => p.compareAt).slice(0, 3);
   const news = real.filter((p) => !p.compareAt).slice(0, 2);
   const msgs = [
-    ...promos.map((p) => `<div class="msg"><img src="${p.photos[0]}" alt="" loading="lazy" width="200" height="200"><p><b>🔥 Promoção relâmpago</b>${esc(p.name)}<br><s>${brl(p.compareAt)}</s> <strong>${brl(p.finalPrice)}</strong></p><time>agora</time></div>`),
-    ...news.map((p) => `<div class="msg"><img src="${p.photos[0]}" alt="" loading="lazy" width="200" height="200"><p><b>✨ Chegou reposição</b>${esc(p.name)} · <strong>${brl(p.finalPrice)}</strong></p><time>hoje</time></div>`),
+    ...promos.map((p) => `<div class="msg"><img src="${p.thumbs[0]}" alt="" loading="lazy" width="200" height="200"><p><b>🔥 Promoção relâmpago</b>${esc(p.name)}<br><s>${brl(p.compareAt)}</s> <strong>${brl(p.finalPrice)}</strong></p><time>agora</time></div>`),
+    ...news.map((p) => `<div class="msg"><img src="${p.thumbs[0]}" alt="" loading="lazy" width="200" height="200"><p><b>✨ Chegou reposição</b>${esc(p.name)} · <strong>${brl(p.finalPrice)}</strong></p><time>hoje</time></div>`),
   ];
   $('#vip-chat').innerHTML = msgs.join('');
 }
@@ -97,9 +97,15 @@ if (!reduceMotion && matchMedia('(hover: hover)').matches) {
 }
 freeMinValue().then((v) => $$('[data-free-min]').forEach((b) => (b.textContent = brl(v))));
 
+// animações param quando a seção sai da tela (menos trabalho para o celular)
+{
+  const io = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('offscreen', !e.isIntersecting)), { rootMargin: '100px 0px' });
+  ['#slider', '.duo2', '.cbanners', '#reels', '.story'].forEach((s) => { const el = $(s); if (el) io.observe(el); });
+}
+
 /* ---------------- categorias em círculo ---------------- */
 function renderCats(list) {
-  const pic = (c) => { const p = list.find((x) => x.cat === c.id && x.photos?.length && x.available) || list.find((x) => x.cat === c.id); return p ? (p.photos?.[0] || img(p.id, 'card-sm')) : null; };
+  const pic = (c) => { const p = list.find((x) => x.cat === c.id && x.photos?.length && x.available) || list.find((x) => x.cat === c.id); return p ? (p.thumbs?.[0] || img(p.id, 'card-sm')) : null; };
   $('#cats').innerHTML = CATEGORIES.filter((c) => list.some((x) => x.cat === c.id)).map((c) => `<li><a href="#catalogo" data-filter="${c.id}"><span class="ci"><img src="${pic(c)}" alt="" loading="lazy" width="480" height="600"></span><b>${c.name}</b></a></li>`).join('')
     + `<li><a href="#loja"><span class="ci ci-3d"><img src="${asset('loja-entrada-m')}" alt="" loading="lazy" width="900" height="1400"></span><b>Loja 3D</b></a></li>`
     + `<li><a href="#catalogo" data-filter="todos"><span class="ci ci-all"><img src="/brand/vs-icon.svg" alt="" width="60" height="60"></span><b>Ver tudo</b></a></li>`;
@@ -127,7 +133,7 @@ async function renderReels() {
     // ainda sem links: cards com fotos reais das peças levando para o perfil + convite
     const real = catalog.filter((p) => p.photos?.length && p.available);
     const picks = real.length ? real.slice(0, 6) : [...PRODUCTS.filter((p) => p.featured), ...PRODUCTS.filter((p) => !p.featured)].slice(0, 6);
-    row.innerHTML = picks.map((p) => `<li class="reel reel-empty"><a href="${STORE.instagramUrl}" target="_blank" rel="noopener" aria-label="Ver vídeos de ${esc(p.name)} no Instagram"><img src="${p.photos?.[1] || p.photos?.[0] || img(p.id, 'mood')}" alt="" loading="lazy" width="900" height="1200"><span class="reel-play" aria-hidden="true"></span><span class="reel-cap">Assista no Instagram</span></a></li>`).join('')
+    row.innerHTML = picks.map((p) => `<li class="reel reel-empty"><a href="${STORE.instagramUrl}" target="_blank" rel="noopener" aria-label="Ver vídeos de ${esc(p.name)} no Instagram"><img src="${p.thumbs?.[1] || p.thumbs?.[0] || img(p.id, 'mood')}" alt="" loading="lazy" width="900" height="1200"><span class="reel-play" aria-hidden="true"></span><span class="reel-cap">Assista no Instagram</span></a></li>`).join('')
       + `<li class="reel reel-follow"><a href="${STORE.instagramUrl}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor"/></svg><b>Siga @${esc(STORE.instagram)}</b><span>Provador, lançamentos e os looks da semana</span></a></li>`;
   }
   updateArrows(row);
@@ -273,7 +279,7 @@ function showTag(it, selected) {
   if (!it || !inside) { tag.hidden = true; tag.classList.remove('sel'); return; }
   const r = it.real;
   if (r) {
-    tag.querySelector('img').src = r.photos?.[0] || img(r.id, 'card-sm');
+    tag.querySelector('img').src = r.thumbs?.[0] || img(r.id, 'card-sm');
     tag.querySelector('b').textContent = r.name;
     tag.querySelector('span').innerHTML = `${r.compareAt ? `<s>${brl(r.compareAt)}</s> ` : ''}<strong>${brl(r.finalPrice)}</strong>${r.available ? '' : ' · esgotado'}${selected || isMobile ? '' : ' · clique para ver'}`;
     tag.querySelector('a').textContent = 'Ver peça';

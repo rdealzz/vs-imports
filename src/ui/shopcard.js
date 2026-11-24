@@ -7,8 +7,8 @@ export const FREE_SHIPPING = 349.9;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 export function shopCardHTML(p) {
-  const photo = p.photos?.[0] || img(p.id, 'card');
-  const photo2 = p.photos?.[1] || (p.photos?.length ? '' : (p.colors.length > 1 ? img(p.id, 'card-1') : ''));
+  const photo = p.thumbs?.[0] || p.photos?.[0] || img(p.id, 'card');
+  const photo2 = p.thumbs?.[1] || p.photos?.[1] || (p.photos?.length ? '' : (p.colors.length > 1 ? img(p.id, 'card-1') : ''));
   const pct = discountPct(p);
   const color = p.colors[0]?.n || '';
   const sizes = p.sizes?.length ? p.sizes : ['Único'];

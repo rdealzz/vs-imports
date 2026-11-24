@@ -525,3 +525,14 @@ body.shop { background: #0B0A08; }
 @media (prefers-reduced-motion: reduce) { .fw-col, .ship-box, .ship-chip, .d2-badge, .msg { animation: none !important; opacity: 1; transform: none; } .sm-fill { width: 100%; } .sm-truck { left: calc(100% - 32px); } }
 .ship-facts { width: 100%; max-width: 560px; }
 .ship-copy { max-width: 820px; } .ship-facts li { white-space: nowrap; }
+
+/* ---------- desempenho: animações só quando visíveis ---------- */
+.offscreen *, .offscreen *::before, .offscreen *::after { animation-play-state: paused !important; }
+.slide:not(.on) *, .slide:not(.on) *::before { animation-play-state: paused !important; }
+/* pulso "ao vivo" sem redesenhar sombra (só transform/opacity) */
+.live-dot { position: relative; box-shadow: none; animation: none; }
+.live-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #3ecf7a; animation: livering 1.8s ease-out infinite; }
+@keyframes livering { from { transform: scale(1); opacity: .6; } to { transform: scale(2.6); opacity: 0; } }
+.fw-col, .d2-badge, .ship-box, .ship-chip { will-change: transform; }
+.d2-glass { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.cover-blur { filter: blur(18px) brightness(.45); }

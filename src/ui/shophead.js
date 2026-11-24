@@ -138,7 +138,7 @@ export function mountShopHead({ home = false, getCatalog = () => [], onFilter = 
       if (!t) { out.innerHTML = ''; return; }
       const cat = (p) => CATEGORIES.find((c) => c.id === p.cat)?.name || '';
       const hits = getCatalog().filter((p) => norm(`${p.name} ${cat(p)}`).includes(t)).slice(0, 8);
-      out.innerHTML = hits.length ? hits.map((p) => `<li><a href="${base}${productUrl(p.id)}"><img src="${p.photos?.[0] || img(p.id, 'card-sm')}" alt="" width="48" height="60"><span>${esc(p.name)}<small>${cat(p)}</small></span><b>${brl(p.finalPrice)}</b></a></li>`).join('')
+      out.innerHTML = hits.length ? hits.map((p) => `<li><a href="${base}${productUrl(p.id)}"><img src="${p.thumbs?.[0] || img(p.id, 'card-sm')}" alt="" width="48" height="60"><span>${esc(p.name)}<small>${cat(p)}</small></span><b>${brl(p.finalPrice)}</b></a></li>`).join('')
         : `<li class="none">Nada encontrado para “${esc(q.value.trim())}”. <a href="https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent(`Olá! Vocês têm ${q.value.trim()}?`)}" target="_blank" rel="noopener">Pergunte no WhatsApp</a></li>`;
     });
     addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) set(false); });

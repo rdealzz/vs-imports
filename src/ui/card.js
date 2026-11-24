@@ -16,7 +16,7 @@ export function mainImage(p, variant = 'card') {
 
 export function cardHTML(p) {
   const hasGen = p.hasLocalImages !== false;
-  const set = (v) => p.photos?.length ? `src="${p.photos[v === 'card-1' ? 1 : 0] || p.photos[0]}"` : `src="${img(p.id, v)}" srcset="${img(p.id, v + '-sm')} 480w, ${img(p.id, v)} 800w" sizes="(max-width: 760px) 50vw, 25vw"`;
+  const set = (v) => p.photos?.length ? `src="${(p.thumbs || p.photos)[v === 'card-1' ? 1 : 0] || (p.thumbs || p.photos)[0]}"` : `src="${img(p.id, v)}" srcset="${img(p.id, v + '-sm')} 480w, ${img(p.id, v)} 800w" sizes="(max-width: 760px) 50vw, 25vw"`;
   const hasSecond = p.photos?.length > 1 || (hasGen && !p.photos?.length && p.colors.length > 1);
   const second = matchMedia('(hover: hover)').matches && hasSecond ? `<img ${set('card-1')} alt="" loading="lazy" decoding="async" width="800" height="1000">` : '';
   const pct = discountPct(p);

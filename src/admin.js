@@ -6,6 +6,7 @@ import { supabase, hasSupabase, friendly } from './lib/supabase.js';
 import { initAuth, auth } from './ui/auth.js';
 import { loadCatalog, photoUrl } from './data/catalog.js';
 import { brl, img, CATEGORIES } from './data/products.js';
+import JsBarcode from 'jsbarcode';
 import { orderPdf, pdfName, downloadBlob, uploadPdf } from './lib/orderPdf.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -58,7 +59,7 @@ auth.on(async (user, profile) => {
 });
 
 /* ============================================================ navegação */
-const VIEWS = { resumo: loadResumo, vender: loadPdv, pedidos: loadOrders, produtos: loadProducts, compras: () => loadCompras(), clientes: () => loadClientes(), despesas: loadExpenses, relatorio: loadReport, ajustes: loadSettings };
+const VIEWS = { resumo: loadResumo, vender: loadPdv, etiquetas: () => loadLabels(), pedidos: loadOrders, produtos: loadProducts, compras: () => loadCompras(), clientes: () => loadClientes(), despesas: loadExpenses, relatorio: loadReport, ajustes: loadSettings };
 function go(v) {
   if (!VIEWS[v] || ($(`[data-go="${v}"]`)?.hasAttribute('data-owner') && !auth.isOwner)) v = 'resumo';
   $$('.view').forEach((s) => (s.hidden = s.id !== 'v-' + v));
@@ -245,7 +246,7 @@ function vStock(p, color, size) {
   if (!p.variants.length) return p.stock == null ? 99 : p.stock;
   return p.variants.find((v) => v.color === color && v.size === size)?.stock ?? 0;
 }
-async function loadPdv() { renderPdvGrid(); renderCart(); $('#pdv-disc').max = auth.isOwner ? 30 : 10; }
+async function loadPdv() { renderPdvGrid(); renderCart(); setTimeout(() => $('#scan-code').focus(), 100); $('#pdv-disc').max = auth.isOwner ? 30 : 10; }
 function renderPdvGrid() {
   const q = $('#pdv-q').value.trim().toLowerCase();
   const list = catalog.filter((p) => p.active && (!q || p.name.toLowerCase().includes(q) || p.id.includes(q)));
@@ -255,6 +256,45 @@ function renderPdvGrid() {
       <div class="pdv-opts" hidden></div></li>`).join('') || '<li class="muted">Nada encontrado.</li>';
 }
 $('#pdv-q').addEventListener('input', renderPdvGrid);
+// leitor de código de barras: o leitor USB "digita" o número e aperta Enter
+function addToCart(p, color, size) {
+  const ex = cart.find((i) => i.id === p.id && i.color === color && i.size === size);
+  const st = vStock(p, color, size), cur = ex ? ex.qty : 0;
+  if (cur + 1 > st) { toast(`Só tem ${st} em estoque.`, true); return false; }
+  if (ex) ex.qty++; else cart.push({ id: p.id, name: p.name, color, size, qty: 1, price: p.finalPrice });
+  renderCart(); return true;
+}
+async function scanAdd(code) {
+  const msg = $('#scan-msg'), c = String(code).replace(/\D/g, '');
+  if (c.length < 8) { msg.textContent = 'Código incompleto.'; return; }
+  msg.textContent = 'Procurando…';
+  const { data, error } = await supabase.rpc('find_by_barcode', { p_code: c });
+  if (error) { msg.textContent = friendly(error); return; }
+  const r = data?.[0];
+  if (!r) { msg.textContent = `Nenhuma peça com o código ${c}.`; beep(false); return; }
+  const p = catalog.find((x) => x.id === r.product_id);
+  if (!p) { msg.textContent = 'Peça fora do catálogo ativo.'; beep(false); return; }
+  if (addToCart(p, r.color, r.size)) { msg.innerHTML = `<b>${esc(r.name)}</b> ${esc([r.color, r.size].filter(Boolean).join(' · '))} adicionada · ${brl(+r.price)}`; beep(true); }
+  else beep(false);
+}
+let audioCtx;
+function beep(ok) {
+  try { audioCtx ||= new AudioContext(); const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.frequency.value = ok ? 1250 : 320; g.gain.value = 0.06; o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + (ok ? 0.08 : 0.25)); } catch {}
+}
+$('#scan').addEventListener('submit', (e) => { e.preventDefault(); const i = $('#scan-code'); scanAdd(i.value); i.value = ''; i.focus(); });
+// com a tela Vender aberta, o leitor funciona mesmo sem clicar no campo
+{
+  let buf = '', last = 0;
+  addEventListener('keydown', (e) => {
+    if ($('#v-vender').hidden || e.target.closest('input, textarea, select') && e.target.id !== 'scan-code') return;
+    if (e.target.id === 'scan-code') return;
+    const now = performance.now();
+    if (now - last > 80) buf = '';
+    last = now;
+    if (/^\d$/.test(e.key)) buf += e.key;
+    else if (e.key === 'Enter' && buf.length >= 8) { e.preventDefault(); scanAdd(buf); buf = ''; }
+  });
+}
 $('#pdv-grid').addEventListener('click', (e) => {
   const item = e.target.closest('.pdv-item');
   if (item) {
@@ -273,6 +313,7 @@ $('#pdv-grid').addEventListener('click', (e) => {
     if (cur + 1 > st) { toast(`Só tem ${st} em estoque.`, true); return; }
     if (ex) ex.qty++; else cart.push({ id: p.id, name: p.name, color, size, qty: 1, price: p.finalPrice });
     renderCart(); toast(`${p.name} ${color} ${size} adicionado`);
+    void cur;
   }
 });
 function renderCart() {
@@ -435,7 +476,7 @@ async function loadProducts() {
       return `<tr><td><img src="${pic(p)}" alt="" loading="lazy"></td><td><b>${esc(p.name)}</b><small>${p.id}</small></td>
         <td>${p.compareAt ? `<s>${brl(p.compareAt)}</s><br>` : ''}${brl(p.finalPrice)}</td>
         ${own ? `<td>${c != null ? brl(c) : '—'}</td><td>${m != null ? `<b class="${m < 30 ? 'neg' : 'pos'}">${m.toFixed(0)}%</b><small>${brl(p.finalPrice - c)} por peça</small>` : '—'}</td><td>${inv.get(p.id) ? `<b>${brl(+inv.get(p.id).invested)}</b><small>vende por ${brl(+inv.get(p.id).retail)}</small>` : '—'}</td>` : ''}
-        <td>${stockTxt}</td><td>${sit}</td>${own ? `<td><button class="pill sm" data-edit="${p.id}">Editar</button></td>` : ''}</tr>`;
+        <td>${stockTxt}</td><td>${sit}</td>${own ? `<td class="c-act"><button class="pill sm" data-edit="${p.id}">Editar</button><button class="pill sm" data-labels="${p.id}">Etiquetas</button></td>` : ''}</tr>`;
     }).join('') + '</tbody>';
 }
 $('#p-table').addEventListener('click', (e) => { const b = e.target.closest('[data-edit]'); if (b) openForm(b.dataset.edit); });
@@ -726,4 +767,69 @@ $('#team').addEventListener('change', async (e) => {
   if (s.value === 'dev' && !confirm('Dar acesso de DESENVOLVEDOR (acesso total ao sistema)?')) { loadTeam(); return; }
   try { await rpc('set_role', { p_user: s.dataset.role, p_role: s.value }); toast('Acesso atualizado'); } catch (err) { toast(friendly(err), true); }
   loadTeam();
+});
+
+
+/* ============================================================ etiquetas (código de barras) */
+let lbRows = [];
+const lbSel = new Map(); // variante -> quantidade
+async function loadLabels() {
+  const { data, error } = await supabase.from('product_variants').select('id, product_id, color, size, stock, barcode').order('product_id').order('color').order('size');
+  if (error) { toast(friendly(error), true); return; }
+  lbRows = data.map((v) => ({ ...v, p: catalog.find((x) => x.id === v.product_id) })).filter((v) => v.p);
+  renderLabels();
+}
+function lbFiltered() {
+  const q = $('#lb-q').value.trim().toLowerCase(), only = $('#lb-stock').checked;
+  return lbRows.filter((v) => (!only || v.stock > 0) && (!q || v.p.name.toLowerCase().includes(q) || v.barcode.includes(q)));
+}
+function renderLabels() {
+  const rows = lbFiltered();
+  $('#lb-table').innerHTML = `<thead><tr><th></th><th>Peça</th><th>Cor · Tam.</th><th>Estoque</th><th>Código de barras</th><th>Qtd. etiquetas</th></tr></thead><tbody>` +
+    (rows.map((v) => `<tr><td><input type="checkbox" data-lb="${v.id}" ${lbSel.has(v.id) ? 'checked' : ''} aria-label="Selecionar"></td>
+      <td class="cell-th">${thumb(v.product_id)}<b>${esc(v.p.name)}</b></td><td>${esc([v.color, v.size].filter(Boolean).join(' · '))}</td><td>${v.stock}</td>
+      <td><code>${v.barcode}</code></td><td><input type="number" min="1" max="500" value="${lbSel.get(v.id) || Math.max(1, v.stock)}" data-lbq="${v.id}" aria-label="Quantidade"></td></tr>`).join('')
+      || '<tr><td colspan="6" class="muted">Nenhuma peça.</td></tr>') + '</tbody>';
+  lbCount();
+}
+function lbCount() { const n = [...lbSel.values()].reduce((t, q) => t + q, 0); $('#lb-count').textContent = lbSel.size ? `${lbSel.size} variantes · ${n} etiquetas` : 'Nenhuma selecionada'; }
+$('#lb-q').addEventListener('input', renderLabels);
+$('#lb-stock').addEventListener('change', renderLabels);
+$('#lb-table').addEventListener('change', (e) => {
+  const c = e.target.closest('[data-lb]'), q = e.target.closest('[data-lbq]');
+  if (c) { const id = +c.dataset.lb, qty = +$(`[data-lbq="${id}"]`).value || 1; c.checked ? lbSel.set(id, qty) : lbSel.delete(id); }
+  if (q) { const id = +q.dataset.lbq; const v = Math.max(1, Math.min(500, +q.value || 1)); q.value = v; if (lbSel.has(id)) lbSel.set(id, v); }
+  lbCount();
+});
+$('#lb-all').addEventListener('click', () => { lbFiltered().forEach((v) => lbSel.set(v.id, +($(`[data-lbq="${v.id}"]`)?.value) || Math.max(1, v.stock))); renderLabels(); });
+$('#lb-none').addEventListener('click', () => { lbSel.clear(); renderLabels(); });
+$('#lb-qty-stock').addEventListener('click', () => { lbRows.forEach((v) => { if (lbSel.has(v.id)) lbSel.set(v.id, Math.max(1, v.stock)); }); $$('[data-lbq]').forEach((i) => { const v = lbRows.find((r) => r.id === +i.dataset.lbq); i.value = Math.max(1, v.stock); }); lbCount(); });
+$('#lb-qty-one').addEventListener('click', () => { [...lbSel.keys()].forEach((k) => lbSel.set(k, 1)); $$('[data-lbq]').forEach((i) => (i.value = 1)); lbCount(); });
+// atalho: etiquetas de uma peça direto da tabela de Produtos
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-labels]'); if (!b) return;
+  go('etiquetas'); $('#lb-q').value = catalog.find((p) => p.id === b.dataset.labels)?.name || ''; $('#lb-stock').checked = false;
+  setTimeout(() => { lbFiltered().filter((v) => v.product_id === b.dataset.labels).forEach((v) => lbSel.set(v.id, Math.max(1, v.stock))); renderLabels(); }, 400);
+});
+$('#lb-print').addEventListener('click', () => {
+  if (!lbSel.size) { toast('Marque as peças que vão ganhar etiqueta.', true); return; }
+  const size = $('#lb-size').value;
+  const labels = [];
+  for (const [id, qty] of lbSel) { const v = lbRows.find((r) => r.id === id); if (v) for (let i = 0; i < qty; i++) labels.push(v); }
+  if (labels.length > 1500) { toast('Máximo de 1.500 etiquetas por impressão.', true); return; }
+  const svg = (code) => { const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); JsBarcode(el, code, { format: 'EAN13', width: 2, height: 56, fontSize: 16, margin: 0, textMargin: 2, displayValue: true, flat: false }); el.removeAttribute('style'); return el.outerHTML; };
+  const cache = new Map();
+  $('#print').innerHTML = `<div class="labels lb-${size}">` + labels.map((v) => {
+    if (!cache.has(v.barcode)) cache.set(v.barcode, svg(v.barcode));
+    const price = v.p.finalPrice;
+    return `<div class="label"><div class="lb-top"><b class="lb-brand">VS IMPORTS</b><b class="lb-price">${brl(price)}</b></div>
+      <div class="lb-name">${esc(v.p.name)}</div><div class="lb-var">${esc([v.color, v.size && 'Tam. ' + v.size].filter(Boolean).join(' · '))}</div>
+      <div class="lb-code">${cache.get(v.barcode)}</div></div>`;
+  }).join('') + '</div>';
+  const page = size === 'a4' ? '@page { size: A4; margin: 8mm; }' : `@page { size: ${size.split('x')[0]}mm ${size.split('x')[1]}mm; margin: 0; }`;
+  const st = document.createElement('style'); st.id = 'lb-page'; st.textContent = `@media print { ${page} }`;
+  document.head.appendChild(st); document.body.classList.add('printing-labels');
+  const done = () => { st.remove(); document.body.classList.remove('printing-labels'); removeEventListener('afterprint', done); };
+  addEventListener('afterprint', done);
+  setTimeout(() => window.print(), 120);
 });

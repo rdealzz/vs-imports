@@ -176,8 +176,8 @@ export class Store3D {
     this.dirty = true;
     this.hover = null; this.selected = null;
     this.onSelect = opts.onSelect; this.onHover = opts.onHover; this.onOpen = opts.onOpen;
-    const maxDpr = Math.min(devicePixelRatio || 1, isMobile ? 1.75 : 2);
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: !!opts.capture });
+    const maxDpr = Math.min(devicePixelRatio || 1, isMobile ? 1.5 : 2);
+    this.renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance', preserveDrawingBuffer: !!opts.capture });
     this.renderer.setPixelRatio(maxDpr);
     // em produção não consulta erros de shader (a consulta força a GPU a esperar e trava o quadro)
     this.renderer.debug.checkShaderErrors = import.meta.env.DEV;
@@ -251,7 +251,7 @@ export class Store3D {
     sun.castShadow = true;
     const sz = Math.max(W, D) * 0.7;
     Object.assign(sun.shadow.camera, { left: -sz, right: sz, top: sz, bottom: -sz, near: 0.5, far: 40 });
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(isMobile ? 1024 : 2048, isMobile ? 1024 : 2048);
     sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.02;
     lights.add(sun, sun.target);
     [z0 - 1.6, (z0 + zb) / 2, zb + 1.8].forEach((z) => { const p = new THREE.PointLight(0xFFD9A8, 3.2, Math.max(W, D) * 1.1, 1.4); p.position.set(0, H - 0.3, z); lights.add(p); });
@@ -514,8 +514,10 @@ export class Store3D {
     if (!n) return;
     this._gallery = new THREE.Group();
     const loader = new THREE.TextureLoader(); loader.setCrossOrigin('anonymous');
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0xC8A45D, metalness: 0.85, roughness: 0.32 });
-    const backMat = new THREE.MeshStandardMaterial({ color: 0x0B0A08, roughness: 0.6 });
+    // materiais sem iluminação: não recompilam a cena (sem tranco ao aparecer)
+    const frameMat = new THREE.MeshBasicMaterial({ color: 0xB8944F });
+    const backMat = new THREE.MeshBasicMaterial({ color: 0x0B0A08 });
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0xE2C484, transparent: true, opacity: 0.18, depthWrite: false });
     const start = R.mid - ((n - 1) * (fw + gap)) / 2;
     // pick por categoria: mistura as linhas
     const byCat = new Map(); list.forEach((p) => { if (!byCat.has(p.cat)) byCat.set(p.cat, []); byCat.get(p.cat).push(p); });
@@ -527,25 +529,31 @@ export class Store3D {
       const border = new THREE.Mesh(new THREE.BoxGeometry(fw + 0.07, fh + 0.07, 0.022), frameMat); border.position.z = -0.02;
       const photoMat = new THREE.MeshBasicMaterial({ color: 0x222222, toneMapped: false });
       const photo = new THREE.Mesh(new THREE.PlaneGeometry(fw, fh), photoMat); photo.position.z = 0.006;
-      loader.load(p.photos[0], (t) => {
-        t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+      // foto reduzida antes de ir para a GPU (upload leve) e só com a página parada
+      const queueLoad = () => loader.load(p.thumbs?.[0] || p.photos[0], async (t) => {
+        await quiet(200);
+        const c = document.createElement('canvas'), w = 360, h = Math.round(360 * t.image.height / t.image.width);
+        c.width = w; c.height = h; c.getContext('2d').drawImage(t.image, 0, 0, w, h); t.image = c;
+        t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 2; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter;
         // cobre o quadro 4:5 sem distorcer
         const ar = t.image.width / t.image.height, fa = fw / fh;
         if (ar > fa) { t.repeat.set(fa / ar, 1); t.offset.set((1 - fa / ar) / 2, 0); } else { t.repeat.set(1, ar / fa); t.offset.set(0, (1 - ar / fa) / 2); }
-        photoMat.map = t; photoMat.color.set(0xffffff); photoMat.needsUpdate = true; this.dirty = true;
+        photoMat.map = t; photoMat.color.set(0xffffff); photoMat.needsUpdate = true;
+        try { this.renderer.initTexture(t); } catch {}
+        this.dirty = true;
       });
-      g.add(border, back, photo);
+      setTimeout(queueLoad, 300 * i);
+      const glow = new THREE.Mesh(new THREE.PlaneGeometry(fw + 0.22, fh + 0.22), glowMat); glow.position.z = -0.03;
+      g.add(glow, border, back, photo);
       this._gallery.add(g);
       g.updateMatrixWorld(true);
       const item = { mesh: photo, index: 0, pid: 'camiseta-vs-classic', ci: 0, pos: new THREE.Vector3(x + 0.02, y + 0.12, z), base: null, kind: 'photo', rotY: 0, real: p, group: g };
       photo.userData.item = item;
       this.items.push(item); this.pickables.push(photo);
     });
-    // luz de galeria sobre os quadros
-    const wash = new THREE.SpotLight(0xFFE2B8, 6, 4, 0.9, 0.7, 1.4); wash.position.set(L.xl + 1.2, L.H - 0.05, R.mid); wash.target.position.set(L.xl, 1.4, R.mid);
-    this._gallery.add(wash, wash.target);
     this.scene.add(this._gallery);
-    this.dirty = true;
+    // compila os materiais novos em paralelo antes do próximo quadro
+    this.renderer.compileAsync(this._gallery, this.camera).catch(() => {}).then(() => { this.dirty = true; });
   }
 
   // tira a peça da arara (ou levanta da prateleira) ao passar o mouse
