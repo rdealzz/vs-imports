@@ -21,10 +21,15 @@ export const STORE = {
 };
 
 export const CATEGORIES = [
-  { id: 'camisetas', name: 'Camisetas', blurb: 'Algodão pesado, caimento reto, estampa que aparece.' },
-  { id: 'bones', name: 'Bonés', blurb: 'Aba curva, aba reta e trucker, bordados.' },
-  { id: 'tenis', name: 'Tênis', blurb: 'Do branco limpo ao preto total.' },
-  { id: 'bermudas', name: 'Bermudas', blurb: 'Sarja e jeans para fechar o conjunto.' },
+  { id: 'camisetas', name: 'Camisetas', blurb: 'Lacoste, Tommy, Casa Blanca, Balmain e mais.' },
+  { id: 'polos', name: 'Polos', blurb: 'Gola assinada, slim fit e clássicas.' },
+  { id: 'bermudas', name: 'Bermudas', blurb: 'Linho, tactel, forradas e jeans.' },
+  { id: 'calcas', name: 'Calças', blurb: 'Jeans jogador e alfaiataria.' },
+  { id: 'conjuntos', name: 'Conjuntos', blurb: 'O look inteiro de uma vez.' },
+  { id: 'inverno', name: 'Inverno', blurb: 'Jaquetas, moletons e suéteres.' },
+  { id: 'bones', name: 'Bonés', blurb: 'Aba curva, sport e de grife.' },
+  { id: 'calcados', name: 'Calçados', blurb: 'Tênis e slides.' },
+  { id: 'acessorios', name: 'Acessórios', blurb: 'Relógios, cintos, perfumes e carteiras.' },
 ];
 
 // cor principal (hex), cor de detalhe e texto da estampa

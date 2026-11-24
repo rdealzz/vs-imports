@@ -290,3 +290,10 @@ body.shop { background: #0B0A08; }
 .reel-follow svg { width: 54px; height: 54px; fill: none; stroke: var(--gold-light); stroke-width: 1.5; }
 .reel-follow b { font-size: 17px; } .reel-follow span { color: var(--ink-2); font-size: 14px; }
 @media (max-width: 760px) { .reels-row { grid-auto-columns: 74%; } .reel { height: 500px; } .reel-empty, .reel-follow { height: 420px; } }
+/* esqueleto enquanto o catálogo carrega */
+.pcard.sk .pc-ph, .pcard.sk i { background: linear-gradient(90deg, #17140F 0%, #221E17 50%, #17140F 100%); background-size: 200% 100%; animation: skel 1.2s linear infinite; }
+.pcard.sk i { display: block; height: 12px; border-radius: 6px; } .pcard.sk i + i { width: 60%; }
+@keyframes skel { to { background-position: -200% 0; } }
+/* fotos reais (retrato) preenchem o card */
+.pc-ph img { object-position: 50% 40%; }
+.cats-row { justify-content: safe center; }

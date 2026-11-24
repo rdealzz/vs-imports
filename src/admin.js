@@ -53,7 +53,7 @@ auth.on(async (user, profile) => {
   }
   gate.hidden = true; app.hidden = false;
   $$('[data-owner]').forEach((n) => (n.hidden = !auth.isOwner));
-  $('#me').innerHTML = `<b>${esc(profile.full_name || user.email)}</b><span>${ROLE[profile.role]}</span><button class="link" data-logout>Sair</button>`;
+  $('#me').innerHTML = `<b>${esc(profile.full_name || user.email)}</b><span>${profile.title ? esc(profile.title) + ' · ' : ''}${ROLE[profile.role]}</span><button class="link" data-logout>Sair</button>`;
   if (!started) { started = true; await reloadCatalog(); go(location.hash.slice(1) || 'resumo'); }
 });
 
@@ -707,7 +707,7 @@ $('#set-form').addEventListener('submit', async (e) => {
 $('#team-q').addEventListener('input', () => { clearTimeout(loadTeam.t); loadTeam.t = setTimeout(loadTeam, 250); });
 async function loadTeam() {
   const q = $('#team-q').value.trim();
-  let req = supabase.from('profiles').select('id, full_name, email, phone, role').order('role').limit(50);
+  let req = supabase.from('profiles').select('id, full_name, email, phone, role, title').order('role').limit(50);
   if (q) req = req.or(`full_name.ilike.%${q.replace(/[%,()]/g, '')}%,email.ilike.%${q.replace(/[%,()]/g, '')}%`);
   else req = req.in('role', ['dev', 'dono', 'vendedor']);
   const { data, error } = await req; if (error) { toast(friendly(error), true); return; }
@@ -716,7 +716,7 @@ async function loadTeam() {
   $('#team').innerHTML = data.map((p) => {
     const locked = p.id === auth.user.id || (p.role === 'dev' && !auth.isDev);
     const opts = (p.role === 'dev' && !auth.isDev ? ['dev'] : roles).map((r) => `<option value="${r}" ${r === p.role ? 'selected' : ''}>${ROLE[r]}</option>`).join('');
-    return `<li><div><b>${esc(p.full_name || '—')}</b><small>${esc(p.email || '')} ${esc(p.phone || '')}</small></div>
+    return `<li><div><b>${esc(p.full_name || '—')}${p.title ? ` <em class="title-tag">${esc(p.title)}</em>` : ''}</b><small>${esc(p.email || '')} ${esc(p.phone || '')}</small></div>
     <select data-role="${p.id}" ${locked ? 'disabled' : ''}>${opts}</select></li>`;
   }).join('') || '<li class="muted">Ninguém encontrado.</li>';
 }

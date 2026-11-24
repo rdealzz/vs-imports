@@ -1,5 +1,6 @@
 import { CATEGORIES, STORE, brl, installments, img } from './data/products.js';
 import { loadCatalog, LOCAL_CATALOG, variantStock, colorAvailable, discountPct } from './data/catalog.js';
+import { hasSupabase } from './lib/supabase.js';
 import { initBag, bag } from './ui/bag.js';
 import { initAuth } from './ui/auth.js';
 import { cardHTML, priceHTML } from './ui/card.js';
@@ -15,10 +16,12 @@ initHeader();
 initAuth();
 initBag();
 
-let catalog = LOCAL_CATALOG, p = null, ci = 0, size = '', viewer = null;
+// com banco: espera o catálogo real (não mostra peça de demonstração enquanto carrega)
+let catalog = hasSupabase ? [] : LOCAL_CATALOG, p = null, ci = 0, size = '', viewer = null;
+const real = () => p?.photos?.length > 0; // peça com fotos reais: galeria de fotos, sem o modelo 3D
 
 function render() {
-  p = catalog.find((x) => x.id === qs.get('id')) || catalog[0];
+  p = catalog.find((x) => x.id === qs.get('id')) || catalog.find((x) => x.available) || catalog[0];
   ci = Math.min(+(qs.get('cor') || 0), p.colors.length - 1);
   // começa numa cor que tenha estoque
   if (!colorAvailable(p, p.colors[ci].n)) { const k = p.colors.findIndex((c) => colorAvailable(p, c.n)); if (k >= 0) ci = k; }
@@ -52,7 +55,7 @@ function renderSizes() {
 function renderThumbs() {
   const thumbs = $('#thumbs');
   const pics = p.photos?.length ? p.photos : (p.hasLocalImages !== false ? [img(p.id, 'mood')] : []);
-  thumbs.innerHTML = `<button type="button" data-v="3d" aria-pressed="true" aria-label="Modelo 3D"><img src="${p.photos?.[0] || img(p.id)}" alt=""><span class="tag3d">3D</span></button>` +
+  thumbs.innerHTML = (real() ? '' : `<button type="button" data-v="3d" aria-pressed="true" aria-label="Modelo 3D"><img src="${img(p.id)}" alt=""><span class="tag3d">3D</span></button>`) +
     pics.map((src, k) => `<button type="button" data-v="${k}" aria-pressed="false" aria-label="Foto ${k + 1}"><img src="${src}" alt=""></button>`).join('');
   thumbs.dataset.pics = JSON.stringify(pics);
 }
@@ -69,7 +72,7 @@ function updateBuy() {
 $('#colors').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
   ci = +b.dataset.i; renderColors(); renderSizes(); updateBuy();
-  viewer?.setProduct(p, ci); showView('3d');
+  if (real()) { const k = p.photos.length > ci ? ci : 0; showView(String(k)); } else { viewer?.setProduct(p, ci); showView('3d'); }
   const u = new URL(location.href); u.searchParams.set('cor', ci); history.replaceState(null, '', u);
 });
 $('#sizes').addEventListener('click', (e) => {
@@ -100,17 +103,18 @@ function related() {
   $('#related').innerHTML = rel.map(cardHTML).join('');
 }
 
-render(); related();
-mountCalc($('#ship'), () => bag.subtotal() + p.finalPrice);
-import('./three/viewer.js').then(({ ProductViewer }) => { viewer = new ProductViewer($('#pdp-3d'), p, ci); })
+const start3d = () => import('./three/viewer.js').then(({ ProductViewer }) => { viewer = new ProductViewer($('#pdp-3d'), p, ci); })
   .catch(() => { $('#pdp-3d').innerHTML = `<img src="${img(p.id)}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover">`; });
+if (catalog.length) { render(); related(); start3d(); }
+mountCalc($('#ship'), () => bag.subtotal() + (p?.finalPrice || 0));
 // dados vivos do banco (preço, promoção, fotos, estoque)
 loadCatalog().then((list) => {
   catalog = list;
   const keep = size;
+  if (!list.length) { $('#name').textContent = 'Peça não encontrada'; return; }
   render(); related();
   if (keep && p.sizes.includes(keep) && variantStock(p, p.colors[ci].n, keep) !== 0) { size = keep; renderSizes(); updateBuy(); }
-  viewer?.setProduct(p, ci);
-  // abre na primeira foto real, se houver
-  if (p.photos?.length) showView('0');
+  // peça real: abre nas fotos; sem fotos: modelo 3D
+  if (real()) { showView('0'); media.classList.add('photos-only'); const bk = $('#back'); if (bk && qs.get('de') !== 'loja') { bk.href = './#catalogo'; bk.textContent = '← Ver mais peças'; } }
+  else if (viewer) viewer.setProduct(p, ci); else start3d();
 });

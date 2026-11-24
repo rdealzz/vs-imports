@@ -121,9 +121,9 @@ let catalog = LOCAL_CATALOG;
 }
 
 /* ---------------- categorias em círculo ---------------- */
-{
-  const pick = (c) => PRODUCTS.find((p) => p.cat === c.id);
-  $('#cats').innerHTML = CATEGORIES.map((c) => `<li><a href="#catalogo" data-filter="${c.id}"><span class="ci"><img src="${img(pick(c).id, 'card-sm')}" alt="" loading="lazy" width="480" height="600"></span><b>${c.name}</b></a></li>`).join('')
+function renderCats(list) {
+  const pic = (c) => { const p = list.find((x) => x.cat === c.id && x.photos?.length && x.available) || list.find((x) => x.cat === c.id); return p ? (p.photos?.[0] || img(p.id, 'card-sm')) : null; };
+  $('#cats').innerHTML = CATEGORIES.filter((c) => list.some((x) => x.cat === c.id)).map((c) => `<li><a href="#catalogo" data-filter="${c.id}"><span class="ci"><img src="${pic(c)}" alt="" loading="lazy" width="480" height="600"></span><b>${c.name}</b></a></li>`).join('')
     + `<li><a href="#loja"><span class="ci ci-3d"><img src="${asset('loja-entrada-m')}" alt="" loading="lazy" width="900" height="1400"></span><b>Loja 3D</b></a></li>`
     + `<li><a href="#catalogo" data-filter="todos"><span class="ci ci-all"><img src="/brand/vs-icon.svg" alt="" width="60" height="60"></span><b>Ver tudo</b></a></li>`;
 }
@@ -148,8 +148,9 @@ async function renderReels() {
     $$('.reel', row).forEach((li) => io.observe(li));
   } else {
     // ainda sem links: cards com as peças levando para o perfil
-    const picks = [...PRODUCTS.filter((p) => p.featured), ...PRODUCTS.filter((p) => !p.featured)].slice(0, 6);
-    row.innerHTML = picks.map((p) => `<li class="reel reel-empty"><a href="${STORE.instagramUrl}" target="_blank" rel="noopener" aria-label="Ver vídeos de ${esc(p.name)} no Instagram"><img src="${img(p.id, 'mood')}" alt="" loading="lazy" width="900" height="1200"><span class="reel-play" aria-hidden="true"></span><span class="reel-cap">Assista no Instagram</span></a></li>`).join('')
+    const real = catalog.filter((p) => p.photos?.length && p.available);
+    const picks = real.length ? real.slice(0, 6) : [...PRODUCTS.filter((p) => p.featured), ...PRODUCTS.filter((p) => !p.featured)].slice(0, 6);
+    row.innerHTML = picks.map((p) => `<li class="reel reel-empty"><a href="${STORE.instagramUrl}" target="_blank" rel="noopener" aria-label="Ver vídeos de ${esc(p.name)} no Instagram"><img src="${p.photos?.[1] || p.photos?.[0] || img(p.id, 'mood')}" alt="" loading="lazy" width="900" height="1200"><span class="reel-play" aria-hidden="true"></span><span class="reel-cap">Assista no Instagram</span></a></li>`).join('')
       + `<li class="reel reel-follow"><a href="${STORE.instagramUrl}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor"/></svg><b>Siga @${esc(STORE.instagram)}</b><span>Provador, lançamentos e os looks da semana</span></a></li>`;
   }
   updateArrows(row);
@@ -292,11 +293,12 @@ let tagItem = null;
 function showTag(it, selected) {
   tagItem = it;
   if (!it || !inside) { tag.hidden = true; tag.classList.remove('sel'); return; }
-  const p = byId(it.pid);
-  tag.querySelector('img').src = img(p.id, it.ci ? 'card-' + it.ci : 'card');
-  tag.querySelector('b').textContent = p.name;
-  tag.querySelector('span').textContent = `${brl(p.price)} · ${p.colors[it.ci].n}${selected || isMobile ? '' : ' · clique para ver'}`;
-  tag.querySelector('a').href = productUrl(p.id, `&cor=${it.ci}&de=loja`);
+  const p = byId(it.pid), c = storeCat(it.pid), real = catalog.find((x) => x.cat === c.id && x.photos?.length);
+  tag.querySelector('img').src = real?.photos[0] || img(p.id, it.ci ? 'card-' + it.ci : 'card');
+  tag.querySelector('b').textContent = c.name;
+  tag.querySelector('span').textContent = `${catalog.filter((x) => x.cat === c.id).length} peças${selected || isMobile ? '' : ' · clique para ver'}`;
+  tag.querySelector('a').textContent = `Ver ${c.name.toLowerCase()}`;
+  tag.querySelector('a').href = '#catalogo';
   tag.classList.toggle('sel', !!selected);
   tag.hidden = false;
   placeTag();
@@ -310,11 +312,14 @@ function placeTag() {
   tag.style.opacity = 1;
   tag.style.transform = `translate(${x}px, ${y}px)`;
 }
-tag.querySelector('a').addEventListener('click', (e) => { if (!tagItem || !store) return; e.preventDefault(); store.open(tagItem); });
-function openProduct(id, ci) {
-  if (store) sessionStorage.setItem('vs-store-cam', JSON.stringify(store.getCamera()));
-  $('#fade').classList.add('on');
-  setTimeout(() => { location.href = productUrl(id, `&cor=${ci}&de=loja`); }, reduceMotion ? 0 : 320);
+tag.querySelector('a').addEventListener('click', (e) => { if (!tagItem) return; e.preventDefault(); openProduct(tagItem.pid); });
+// a loja 3D usa peças ilustrativas: tocar numa peça abre as peças reais daquela linha
+const STORE_CAT = { tenis: 'calcados' };
+function storeCat(pid) { const id = STORE_CAT[byId(pid)?.cat] || byId(pid)?.cat; return CATEGORIES.find((c) => c.id === id) || CATEGORIES[0]; }
+function openProduct(id) {
+  const c = storeCat(id);
+  exitStore();
+  setTimeout(() => { setFilter(c.id); $('#catalogo').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' }); }, 400);
 }
 addEventListener('pageshow', () => $('#fade').classList.remove('on'));
 $$('[data-view]').forEach((b) => b.addEventListener('click', () => { store?.setView(b.dataset.view); showTag(null); }));
@@ -323,10 +328,10 @@ $('#zout').addEventListener('click', () => store?.zoom(1.3));
 function buildStoreList() {
   const seen = new Set(); const ul = $('#store-list');
   store.items.forEach((it) => {
-    if (seen.has(it.pid)) return; seen.add(it.pid);
+    const key = storeCat(it.pid).id; if (seen.has(key)) return; seen.add(key); // um botão por linha
     const p = byId(it.pid);
     const li = document.createElement('li');
-    li.innerHTML = `<button type="button"><img src="${img(p.id, 'card-sm')}" alt="">${p.name}</button>`;
+    li.innerHTML = `<button type="button"><img src="${img(p.id, 'card-sm')}" alt="">${storeCat(p.id).name}</button>`;
     li.firstChild.addEventListener('click', async () => {
       await enterStore();
       store.selected = it; store.setHover(it); store.focusItem(it, 900); showTag(it, true);
@@ -353,11 +358,15 @@ document.addEventListener('click', (e) => {
 });
 function renderAll(list) {
   catalog = list;
+  renderCats(list);
+  if ($('#reels-row .reel-empty')) renderReels();
+  filters.innerHTML = [{ id: 'todos', name: 'Todos' }, ...CATEGORIES.filter((c) => list.some((x) => x.cat === c.id))].map((c) => `<button class="chip" data-f="${c.id}" aria-pressed="${c.id === currentFilter}">${c.name}</button>`).join('');
   grid.innerHTML = list.map(shopCardHTML).join('');
   setFilter(currentFilter);
   fillShelves(list);
 }
-renderAll(LOCAL_CATALOG);
+// com banco: mostra esqueletos até o catálogo real chegar (sem piscar peças de demonstração)
+if (hasSupabase) { const sk = '<li class="pcard sk"><div class="pc-ph"></div><div class="pc-body"><i></i><i></i></div></li>'.repeat(6); $$('[data-shelf], #grid').forEach((u) => (u.innerHTML = sk)); } else renderAll(LOCAL_CATALOG);
 renderReels();
 // catálogo vivo do banco: preços, promoções, fotos, esgotados e peças novas
 loadCatalog().then(renderAll);

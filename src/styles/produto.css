@@ -52,3 +52,6 @@
 .pdp-thumbs button { position: relative; }
 .tag3d { position: absolute; right: 4px; bottom: 4px; font-size: 10px; font-weight: 700; background: var(--gold-grad); color: #111; padding: 1px 5px; border-radius: 4px; }
 .price b, #price { font-size: 26px; font-weight: 650; }
+.pdp-media.photos-only .pdp-3d { display: none; }
+.pdp-media.photos-only .pdp-hint, .pdp-media.photos-only [data-hint], .pdp-media.photos-only .hint { display: none; }
+.pdp-media.photos-only .hint3d { display: none; }
