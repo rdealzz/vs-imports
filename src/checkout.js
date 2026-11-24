@@ -9,7 +9,7 @@ import { bag } from './ui/bag.js';
 import { listAddresses, formHTML, bindForm, addressLine } from './ui/addresses.js';
 import { renderFooter } from './ui/footer.js';
 import { initHeader } from './ui/header.js';
-import { quote, freeBarHTML } from './lib/shipping.js';
+import { freeBarHTML } from './lib/shipping.js';
 import { orderPdf, pdfName, downloadBlob, uploadPdf, waOrderLink } from './lib/orderPdf.js';
 
 // quando o Mercado Pago estiver integrado, troque para true
@@ -17,7 +17,7 @@ const MP_ONLINE = false;
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-let catalog = [], eligible = false, addresses = [], addrId = null, ship = null, shipKey = '';
+let catalog = [], eligible = false, addresses = [], addrId = null, ship = null, shipKey = '', shipOpts = [], quoteId = null;
 const find = (id) => catalog.find((p) => p.id === id);
 const delivery = () => document.querySelector('[name=delivery]:checked').value;
 const pay = () => document.querySelector('[name=pay]:checked').value;
@@ -85,7 +85,21 @@ function renderSummary() {
   // frete oficial vem do banco pelo CEP do endereço escolhido
   const a = delivery() === 'entrega' ? addresses.find((x) => x.id === addrId) : null;
   const key = a ? `${a.cep}|${sub}` : '';
-  if (a && shipKey !== key) { shipKey = key; ship = null; quote(a.cep, sub).then((q) => { if (shipKey === key) { ship = q || { price: 0, days: 'prazo a combinar', free: false }; renderSummary(); } }).catch(() => { ship = { price: 0, days: 'a combinar', free: false, err: true }; renderSummary(); }); }
+  $('#ship-pick').hidden = !a;
+  if (a && shipKey !== key) {
+    shipKey = key; ship = null; shipOpts = []; quoteId = null; $('#ship-opts').innerHTML = '<li class="small">Calculando o frete…</li>';
+    // cotação no servidor (SuperFrete ou tabela da loja); o pedido usa o id da cotação
+    supabase.functions.invoke('frete-cotar', { body: { cep: a.cep, items: list.map((i) => ({ id: i.id, qty: i.qty })) } }).then(({ data, error }) => {
+      if (shipKey !== key) return;
+      if (error || !data?.options?.length) { ship = { price: 0, days: null, err: true }; $('#ship-opts').innerHTML = '<li class="co-warn">Não deu para calcular o frete agora: combinamos pelo WhatsApp.</li>'; renderSummary(); return; }
+      shipOpts = data.options; quoteId = shipOpts[0].id;
+      $('#ship-opts').innerHTML = shipOpts.map((o, k) => `<li><label class="opt"><input type="radio" name="shipopt" value="${o.id}"${k ? '' : ' checked'}>
+        <span><b>${esc(o.name)}${o.company && o.source === 'superfrete' ? ` <small>· ${esc(o.company)}</small>` : ''}</b><small>${o.days ? `até ${o.days} dias úteis` : 'prazo combinado no WhatsApp'}</small></span>
+        <strong class="sp">${o.price ? brl(o.price) : '<em class="free">grátis</em>'}</strong></label></li>`).join('');
+      ship = { price: shipOpts[0].price, days: shipOpts[0].days ? `até ${shipOpts[0].days} dias úteis` : '', free: data.free };
+      renderSummary(); refresh();
+    });
+  }
   const shipVal = a && ship ? +ship.price : 0;
   const shipTxt = delivery() !== 'entrega' ? 'grátis' : !a ? 'informe o endereço' : !ship ? 'calculando…' : ship.err ? 'a combinar' : ship.free || !shipVal ? '<b class="free">grátis</b>' : brl(shipVal);
   freeBarHTML(list.length ? sub : 0).then((h) => { $('#free').innerHTML = delivery() === 'entrega' ? h : ''; });
@@ -106,17 +120,32 @@ function refresh() {
   step(!auth.user ? 1 : needAddr ? 2 : 3);
 }
 
+document.addEventListener('change', (e) => {
+  if (e.target.name !== 'shipopt') return;
+  const o = shipOpts.find((x) => x.id === e.target.value); if (!o) return;
+  quoteId = o.id; ship = { price: o.price, days: o.days ? `até ${o.days} dias úteis` : '', free: !o.price }; refresh();
+});
+const cpfDigits = () => $('#cpf').value.replace(/\D/g, '');
+function cpfOk(c) {
+  if (c.length !== 11 || /^(\d)\1{10}$/.test(c)) return false;
+  const dv = (n) => { let s = 0; for (let i = 0; i < n; i++) s += +c[i] * (n + 1 - i); const r = (s * 10) % 11; return r === 10 ? 0 : r; };
+  return dv(9) === +c[9] && dv(10) === +c[10];
+}
+$('#cpf')?.addEventListener('input', (e) => { const d = cpfDigits().slice(0, 11); e.target.value = d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/(\d{3})(\d{1,2})$/, '$1-$2'); });
+
 async function submit() {
   const msg = $('#msg'), go = $('#go');
   if (!hasSupabase) { msg.textContent = 'Finalização indisponível no momento.'; return; }
   if (!auth.user) { openAuth('criar', { reason: 'Crie sua conta para finalizar e ganhe <b>5% de desconto</b> na primeira compra.' }); return; }
   const items = bag.items.filter((i) => find(i.id));
   const del = delivery();
+  if (del === 'entrega' && !cpfOk(cpfDigits())) { msg.textContent = 'Digite um CPF válido de quem vai receber (a transportadora exige).'; $('#cpf').focus(); return; }
   go.disabled = true; msg.textContent = 'Reservando suas peças…';
   const notes = [`Pagamento: ${pay()}`, $('#notes').value.trim()].filter(Boolean).join(' · ');
   const { data: o, error } = await supabase.rpc('place_order', {
     items: items.map((i) => ({ id: i.id, qty: i.qty, color: i.color, size: i.size })),
     p_delivery: del, p_notes: notes, p_address_id: del === 'entrega' ? addrId : null,
+    p_quote_id: del === 'entrega' ? quoteId : null, p_document: del === 'entrega' ? cpfDigits() : null,
   });
   if (error) { msg.textContent = friendly(error); go.disabled = false; catalog = await loadCatalog({ fresh: true }); refresh(); return; }
   const a = del === 'entrega' ? addresses.find((x) => x.id === addrId) : null;

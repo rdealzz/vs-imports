@@ -66,3 +66,25 @@ A integração é gratuita e não tem mensalidade; as etiquetas são pagas com o
 
 Já estão liberados `api.superfrete.com` e `sandbox.superfrete.com`. Para criar as Edge Functions, faltam só os tokens
 (Sandbox primeiro).
+
+## Status da integração (já construída)
+
+- **Edge Functions no ar:** `frete-cotar` (checkout), `frete-etiqueta` (painel: gerar, reimprimir, rastrear, cancelar)
+  e `frete-webhook` (rastreio automático; não confia no aviso: consulta a SuperFrete pelo id).
+- **Checkout:** opções de frete (PAC, SEDEX, Mini Envios, Jadlog, Loggi) com preço e prazo, CPF de quem recebe
+  (validado) e cotação gravada no servidor; acima do valor de frete grátis o cliente paga R$ 0,00.
+  Sem token no servidor, a cotação usa a tabela por região do painel (nada quebra).
+- **Painel → Pedidos:** em pedidos de entrega pagos aparece **Gerar etiqueta de envio** (desconta o saldo da carteira e
+  abre o PDF), depois **Imprimir etiqueta de envio**, **Atualizar rastreio** e **Cancelar etiqueta**.
+- **Painel → Ajustes → Remetente das etiquetas:** endereço de onde as peças saem (obrigatório para gerar etiqueta).
+
+## Para ligar (falta só isto)
+
+1. No Supabase: **Edge Functions → Secrets**, adicionar:
+   - `SUPERFRETE_TOKEN` = token da SuperFrete (primeiro o do Sandbox; depois o de Produção)
+   - `SUPERFRETE_URL` = `https://sandbox.superfrete.com` para testes, `https://api.superfrete.com` em produção
+   - `SUPERFRETE_UA` = `VS Imports 1.0 (e-mail de contato da loja)`
+2. Preencher o remetente em **Painel → Ajustes**.
+3. Cadastrar o webhook na SuperFrete apontando para
+   `https://lmwosmsnpsguqymbuanv.supabase.co/functions/v1/frete-webhook`
+   (eventos `order.generated`, `order.posted`, `order.delivered`, `order.cancelled`).

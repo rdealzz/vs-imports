@@ -130,3 +130,10 @@
 .co-page .free-bar.ok p { color: #9ad48f; } .co-page .free-bar.ok i { background: #6fbf73; }
 .co-tot .free { color: #9ad48f; font-weight: 700; }
 .co-tot dt small { color: var(--ink-d); font-size: 12px; }
+.ship-pick { margin-top: 18px; }
+.ship-pick h3 { margin: 0 0 10px; font-size: 16px; }
+.ship-opts { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.ship-opts .opt { align-items: center; }
+.ship-opts .opt span { flex: 1; }
+.ship-opts .sp { font-variant-numeric: tabular-nums; } .ship-opts .free { font-style: normal; color: #9ad48f; }
+.cpf-f { max-width: 420px; }

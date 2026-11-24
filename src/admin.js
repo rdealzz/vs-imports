@@ -403,7 +403,7 @@ async function ordersTotals() {
   $('#o-n-loja').textContent = sum((o) => o.channel !== 'site');
 }
 async function loadOrders() {
-  let q = supabase.from('orders').select('id, number, created_at, channel, payment, status, subtotal, discount, total, coupon_code, customer_name, customer_phone, delivery, notes, shipping_address, shipping, user_id, order_items(product_id, name, color, size, qty, unit_price)').order('created_at', { ascending: false }).limit(150);
+  let q = supabase.from('orders').select('id, number, created_at, channel, payment, status, subtotal, discount, total, coupon_code, customer_name, customer_phone, delivery, notes, shipping_address, shipping, customer_document, shipping_service_name, shipping_days, superfrete_id, tracking_code, label_url, shipping_status, user_id, order_items(product_id, name, color, size, qty, unit_price)').order('created_at', { ascending: false }).limit(150);
   if ($('#o-status').value) q = q.eq('status', $('#o-status').value);
   if (oSrc === 'site') q = q.eq('channel', 'site');
   else if (oSrc === 'loja') q = $('#o-channel').value ? q.eq('channel', $('#o-channel').value) : q.neq('channel', 'site');
@@ -432,8 +432,35 @@ function shipHTML(o) {
   if (!a) return '<div class="o-ship warn">Entrega sem endereço registrado: confirme com o cliente.</div>';
   return `<div class="o-ship"><div><span>Enviar para</span><p>${esc(addrText(a)).replace(/\n/g, '<br>')}</p></div>
     <div class="o-ship-act"><button class="pill sm" type="button" data-copy="${esc(addrText(a))}">Copiar endereço</button>
-    <a class="pill sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${a.street}, ${a.number}, ${a.city} ${a.state} ${a.cep}`)}" target="_blank" rel="noopener">Mapa</a></div></div>`;
+    <a class="pill sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${a.street}, ${a.number}, ${a.city} ${a.state} ${a.cep}`)}" target="_blank" rel="noopener">Mapa</a></div></div>${sendHTML(o)}`;
 }
+// envio pela SuperFrete: gerar etiqueta, imprimir de novo, rastreio
+const SF_ST = { pending: 'aguardando pagamento da etiqueta', released: 'etiqueta pronta · aguardando postagem', posted: 'postado', delivered: 'entregue', cancelled: 'etiqueta cancelada' };
+function sendHTML(o) {
+  if (!auth.isOwner || o.status === 'cancelado') return '';
+  const info = [o.shipping_service_name && `${esc(o.shipping_service_name)}${o.shipping_days ? ` · até ${o.shipping_days} dias úteis` : ''}`,
+    o.customer_document && `CPF ${esc(o.customer_document.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'))}`,
+    o.shipping_status && esc(SF_ST[o.shipping_status] || o.shipping_status),
+    o.tracking_code && `rastreio <a href="https://rastreio.superfrete.com/#/tracking/${encodeURIComponent(o.tracking_code)}" target="_blank" rel="noopener">${esc(o.tracking_code)}</a>`].filter(Boolean).join(' · ');
+  const can = ['pago', 'separado'].includes(o.status);
+  const btns = o.label_url
+    ? `<a class="pill sm solid" href="${esc(o.label_url)}" target="_blank" rel="noopener">Imprimir etiqueta de envio</a><button class="pill sm" type="button" data-sf="status" data-o="${o.id}">Atualizar rastreio</button>${o.shipping_status === 'released' ? `<button class="pill sm danger" type="button" data-sf="cancelar" data-o="${o.id}">Cancelar etiqueta</button>` : ''}`
+    : `<button class="pill sm solid" type="button" data-sf="gerar" data-o="${o.id}" ${can ? '' : 'disabled title="Marque o pedido como pago primeiro"'}>Gerar etiqueta de envio</button>${can ? '' : '<small class="muted">marque como pago para liberar</small>'}`;
+  return `<div class="o-send"><span>${info || 'Envio pela SuperFrete'}</span><div>${btns}</div></div>`;
+}
+const SF_ERR = { superfrete_sem_token: 'Falta configurar o token da SuperFrete no servidor.', remetente_incompleto: 'Preencha o endereço do remetente em Ajustes.', pedido_nao_pago: 'Marque o pedido como pago antes.', cotacao_indisponivel: 'A SuperFrete não cotou esse envio.' };
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-sf]'); if (!b) return;
+  if (b.dataset.sf === 'gerar' && !confirm('Gerar a etiqueta? O valor do frete é descontado do saldo da carteira SuperFrete.')) return;
+  if (b.dataset.sf === 'cancelar' && !confirm('Cancelar a etiqueta? O valor volta para a carteira SuperFrete.')) return;
+  b.disabled = true; const t = b.textContent; b.textContent = 'Aguarde…';
+  const { data, error } = await supabase.functions.invoke('frete-etiqueta', { body: { order_id: b.dataset.o, acao: b.dataset.sf } });
+  let msg = data?.error; if (error && !msg) { try { msg = (await error.context.json()).error; } catch { msg = error.message; } }
+  if (msg) { toast(SF_ERR[msg] || msg, true); b.disabled = false; b.textContent = t; return; }
+  if (data?.url) open(data.url, '_blank', 'noopener');
+  toast(b.dataset.sf === 'gerar' ? 'Etiqueta gerada' : b.dataset.sf === 'cancelar' ? 'Etiqueta cancelada' : 'Rastreio atualizado');
+  loadOrders();
+});
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-copy]'); if (!b) return;
   try { await navigator.clipboard.writeText(b.dataset.copy); toast('Endereço copiado'); } catch { prompt('Copie o endereço:', b.dataset.copy); }
@@ -731,8 +758,21 @@ $('#ship-form').addEventListener('submit', async (e) => {
   const err = res.find((r) => r.error)?.error;
   toast(err ? friendly(err) : 'Frete salvo', !!err); loadShipping();
 });
+async function loadSender() {
+  const { data } = await supabase.from('store_settings').select('sender').maybeSingle();
+  const f = $('#sender-form'), s = data?.sender || {};
+  ['name', 'postal_code', 'address', 'number', 'complement', 'district', 'city', 'state_abbr'].forEach((k) => { if (f[k]) f[k].value = s[k] || (k === 'name' ? 'VS Imports' : k === 'state_abbr' ? 'PR' : k === 'city' ? 'Curitiba' : ''); });
+}
+$('#sender-form').addEventListener('submit', async (e) => {
+  e.preventDefault(); const f = e.target;
+  const s = Object.fromEntries(['name', 'postal_code', 'address', 'number', 'complement', 'district', 'city', 'state_abbr'].map((k) => [k, f[k].value.trim()]));
+  s.postal_code = s.postal_code.replace(/\D/g, ''); s.state_abbr = s.state_abbr.toUpperCase().slice(0, 2);
+  if (s.postal_code.length !== 8 || !s.address || !s.district || !s.city) { toast('Preencha CEP, rua, bairro e cidade.', true); return; }
+  const { error } = await supabase.from('store_settings').update({ sender: s, updated_at: new Date().toISOString() }).eq('id', true);
+  toast(error ? friendly(error) : 'Remetente salvo', !!error);
+});
 async function loadSettings() {
-  loadShipping(); loadReels();
+  loadShipping(); loadReels(); loadSender();
   const { data } = await supabase.from('store_settings').select('month_start_day, monthly_goal').maybeSingle();
   $('#set-form').day.value = data?.month_start_day || 1; $('#set-form').goal.value = data?.monthly_goal ?? ''; previewPeriod();
   loadTeam();
@@ -811,25 +851,48 @@ document.addEventListener('click', (e) => {
   go('etiquetas'); $('#lb-q').value = catalog.find((p) => p.id === b.dataset.labels)?.name || ''; $('#lb-stock').checked = false;
   setTimeout(() => { lbFiltered().filter((v) => v.product_id === b.dataset.labels).forEach((v) => lbSel.set(v.id, Math.max(1, v.stock))); renderLabels(); }, 400);
 });
+// papéis: medidas em mm (folhas Pimaco padrão e rolos térmicos)
+const PAPERS = {
+  a4356: { pageW: 210, pageH: 297, cols: 3, rows: 11, w: 63.5, h: 25.4, top: 8.8, left: 7.2, gapX: 2.5, gapY: 0, tiny: true },
+  a4360: { pageW: 210, pageH: 297, cols: 3, rows: 7, w: 63.5, h: 38.1, top: 15.15, left: 7.2, gapX: 2.5, gapY: 0 },
+  a4351: { pageW: 210, pageH: 297, cols: 5, rows: 13, w: 38.2, h: 21.2, top: 10.7, left: 4.7, gapX: 2.5, gapY: 0, tiny: true, mini: true },
+  'a4-grade': { pageW: 210, pageH: 297, cols: 3, rows: 8, w: 64, h: 34, top: 10, left: 6, gapX: 3, gapY: 1.5, cut: true },
+  't3-33x22': { pageW: 105, pageH: 22, cols: 3, rows: 1, w: 33, h: 22, top: 0, left: 1, gapX: 2, gapY: 0, tiny: true, mini: true },
+  't2-40x25': { pageW: 84, pageH: 25, cols: 2, rows: 1, w: 40, h: 25, top: 0, left: 1, gapX: 2, gapY: 0, tiny: true },
+  't1-50x30': { pageW: 50, pageH: 30, cols: 1, rows: 1, w: 50, h: 30, top: 0, left: 0, gapX: 0, gapY: 0 },
+};
 $('#lb-print').addEventListener('click', () => {
   if (!lbSel.size) { toast('Marque as peças que vão ganhar etiqueta.', true); return; }
-  const size = $('#lb-size').value;
+  const P = PAPERS[$('#lb-size').value];
+  const per = P.cols * P.rows;
+  const skip = Math.max(0, Math.min(per - 1, (+$('#lb-skip').value || 1) - 1));
   const labels = [];
   for (const [id, qty] of lbSel) { const v = lbRows.find((r) => r.id === id); if (v) for (let i = 0; i < qty; i++) labels.push(v); }
-  if (labels.length > 1500) { toast('Máximo de 1.500 etiquetas por impressão.', true); return; }
-  const svg = (code) => { const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); JsBarcode(el, code, { format: 'EAN13', width: 2, height: 56, fontSize: 16, margin: 0, textMargin: 2, displayValue: true, flat: false }); el.removeAttribute('style'); return el.outerHTML; };
+  if (labels.length > 2000) { toast('Máximo de 2.000 etiquetas por impressão.', true); return; }
   const cache = new Map();
-  $('#print').innerHTML = `<div class="labels lb-${size}">` + labels.map((v) => {
-    if (!cache.has(v.barcode)) cache.set(v.barcode, svg(v.barcode));
-    const price = v.p.finalPrice;
-    return `<div class="label"><div class="lb-top"><b class="lb-brand">VS IMPORTS</b><b class="lb-price">${brl(price)}</b></div>
-      <div class="lb-name">${esc(v.p.name)}</div><div class="lb-var">${esc([v.color, v.size && 'Tam. ' + v.size].filter(Boolean).join(' · '))}</div>
-      <div class="lb-code">${cache.get(v.barcode)}</div></div>`;
-  }).join('') + '</div>';
-  const page = size === 'a4' ? '@page { size: A4; margin: 8mm; }' : `@page { size: ${size.split('x')[0]}mm ${size.split('x')[1]}mm; margin: 0; }`;
-  const st = document.createElement('style'); st.id = 'lb-page'; st.textContent = `@media print { ${page} }`;
+  const svg = (code) => {
+    if (cache.has(code)) return cache.get(code);
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    JsBarcode(el, code, { format: 'EAN13', width: 2, height: 50, fontSize: 15, margin: 0, textMargin: 1, displayValue: true });
+    el.removeAttribute('style'); el.removeAttribute('width'); el.removeAttribute('height'); el.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    cache.set(code, el.outerHTML); return el.outerHTML;
+  };
+  const cell = (v) => `<div class="label"><div class="lb-top"><b class="lb-brand">VS IMPORTS</b><b class="lb-price">${brl(v.p.finalPrice)}</b></div>
+    <div class="lb-name">${esc(v.p.name)}</div><div class="lb-var">${esc([v.color, v.size && 'Tam. ' + v.size].filter(Boolean).join(' · '))}</div>
+    <div class="lb-code">${svg(v.barcode)}</div></div>`;
+  // monta as páginas: posições vazias no começo (folha reaproveitada) e grade fixa em mm
+  const slots = [...Array(skip).fill(null), ...labels];
+  const pages = [];
+  for (let i = 0; i < slots.length; i += per) pages.push(slots.slice(i, i + per));
+  const grid = `grid-template-columns: repeat(${P.cols}, ${P.w}mm); grid-auto-rows: ${P.h}mm; column-gap: ${P.gapX}mm; row-gap: ${P.gapY}mm; padding: ${P.top}mm 0 0 ${P.left}mm; width: ${P.pageW}mm; height: ${P.pageH}mm;`;
+  $('#print').innerHTML = `<div class="labels${P.tiny ? ' lb-tiny' : ''}${P.mini ? ' lb-mini' : ''}${P.cut ? ' lb-cut' : ''}">` +
+    pages.map((pg) => `<section class="lb-page" style="${grid}">${pg.map((v) => (v ? cell(v) : '<div class="label empty"></div>')).join('')}</section>`).join('') + '</div>';
+  const st = document.createElement('style'); st.id = 'lb-page';
+  st.textContent = `@media print { @page { size: ${P.pageW}mm ${P.pageH}mm; margin: 0; } }`;
   document.head.appendChild(st); document.body.classList.add('printing-labels');
   const done = () => { st.remove(); document.body.classList.remove('printing-labels'); removeEventListener('afterprint', done); };
   addEventListener('afterprint', done);
-  setTimeout(() => window.print(), 120);
+  toast(`${labels.length} etiquetas em ${pages.length} ${P.rows > 1 ? 'folha' : 'linha'}${pages.length > 1 ? 's' : ''}`);
+  setTimeout(() => window.print(), 150);
 });
+

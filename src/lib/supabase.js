@@ -27,6 +27,8 @@ const MSG = {
   'Database error saving new user': 'Não foi possível criar a conta: esse e-mail ou WhatsApp já está cadastrado.',
   'rate limit': 'Muitas tentativas. Aguarde alguns minutos.',
   cep_invalido: 'CEP inválido: confira os 8 números.',
+  cpf_invalido: 'CPF inválido: confira os números.',
+  frete_expirado: 'O frete expirou ou mudou. Escolha a forma de envio de novo.',
   'Invalid login credentials': 'E-mail ou senha incorretos.',
   'Email not confirmed': 'Confirme seu e-mail pelo link que enviamos.',
   'User already registered': 'Já existe uma conta com esse e-mail.',

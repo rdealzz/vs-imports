@@ -110,7 +110,20 @@
         <div class="filters-row">
           <input class="search" id="lb-q" type="search" placeholder="Buscar peça…">
           <label class="lb-chk"><input type="checkbox" id="lb-stock" checked> Só com estoque</label>
-          <select id="lb-size" aria-label="Tamanho da etiqueta"><option value="50x30">Etiqueta 50 × 30 mm (térmica)</option><option value="40x25">Etiqueta 40 × 25 mm (térmica)</option><option value="a4">Folha A4 (3 colunas)</option></select>
+          <select id="lb-size" aria-label="Papel da etiqueta">
+            <optgroup label="Folha A4 (impressora comum)">
+              <option value="a4356" selected>Pimaco A4356 · 33 por folha (63,5 × 25,4 mm)</option>
+              <option value="a4360">Pimaco A4360 · 21 por folha (63,5 × 38,1 mm)</option>
+              <option value="a4351">Pimaco A4351 · 65 por folha (38,2 × 21,2 mm)</option>
+              <option value="a4-grade">A4 simples · 24 por folha (recortar)</option>
+            </optgroup>
+            <optgroup label="Rolo térmico (impressora de etiqueta)">
+              <option value="t3-33x22">Rolo 3 colunas · 33 × 22 mm</option>
+              <option value="t2-40x25">Rolo 2 colunas · 40 × 25 mm</option>
+              <option value="t1-50x30">Rolo 1 coluna · 50 × 30 mm</option>
+            </optgroup>
+          </select>
+          <label class="lb-chk" title="Para reaproveitar uma folha já usada">Começar na etiqueta nº <input type="number" id="lb-skip" min="1" value="1" style="width:64px"></label>
         </div>
       </header>
       <div class="lb-bar">
@@ -248,6 +261,21 @@
           <p class="muted">Cole o link de um Reels da loja (no Instagram: ⋯ → Copiar link). Eles aparecem na home, na ordem abaixo.</p>
           <div class="reels-add"><input class="search" name="url" type="url" inputmode="url" placeholder="https://www.instagram.com/reel/…" required><button class="pill solid" type="submit">Adicionar</button></div>
           <ul class="reels-list" id="reels-list"></ul>
+        </form>
+        <form class="panel" id="sender-form">
+          <h2>Remetente das etiquetas (SuperFrete)</h2>
+          <p class="muted">Endereço de onde as peças saem. Vai impresso em todas as etiquetas de envio.</p>
+          <div class="grid-buy">
+            <label class="fld grow">Nome<input name="name" maxlength="50"></label>
+            <label class="fld">CEP<input name="postal_code" inputmode="numeric" maxlength="9"></label>
+            <label class="fld grow">Rua<input name="address" maxlength="50"></label>
+            <label class="fld">Número<input name="number" maxlength="10"></label>
+            <label class="fld">Complemento<input name="complement" maxlength="20"></label>
+            <label class="fld">Bairro<input name="district" maxlength="60"></label>
+            <label class="fld">Cidade<input name="city" maxlength="50"></label>
+            <label class="fld">UF<input name="state_abbr" maxlength="2"></label>
+          </div>
+          <button class="pill solid" type="submit">Salvar remetente</button>
         </form>
         <form class="panel" id="ship-form">
           <h2>Frete</h2>
