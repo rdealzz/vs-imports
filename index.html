@@ -19,69 +19,6 @@
 <body class="home shop">
 <a class="skip" href="#mais-vendidos">Pular para os produtos</a>
 
-<!-- barra de avisos -->
-<div class="adbar" role="region" aria-label="Avisos da loja">
-  <button class="adbar-arrow" type="button" data-ad="-1" aria-label="Aviso anterior">‹</button>
-  <ul class="adbar-list" id="adbar">
-    <li class="on">Frete grátis acima de <b>R$ 349,90</b></li>
-    <li><b>5% OFF</b> na primeira compra pelo site</li>
-    <li>Cartão em até <b>3x sem juros</b> · Pix</li>
-    <li>Retire no <b>mesmo dia</b> no Capão Raso</li>
-  </ul>
-  <button class="adbar-arrow" type="button" data-ad="1" aria-label="Próximo aviso">›</button>
-</div>
-
-<!-- cabeçalho da loja -->
-<header class="site-head shop-head" id="top" data-head="dark">
-  <div class="sh-row">
-    <div class="sh-left">
-      <button class="sh-icon sh-menu" type="button" id="menu-open" aria-label="Abrir menu" aria-expanded="false" aria-controls="drawer">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-      </button>
-      <button class="sh-icon" type="button" id="search-open" aria-label="Buscar produtos" aria-expanded="false" aria-controls="search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-      </button>
-    </div>
-    <a class="sh-logo" href="./" aria-label="VS Imports, início"><img src="/brand/vs-logo.svg" alt="VS Imports" width="64" height="64"></a>
-    <div class="sh-right">
-      <button class="bag-btn sh-bag" type="button" data-bag-open aria-label="Abrir sacola">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V7a3 3 0 0 1 6 0v1"/></svg>
-        <b data-bag-count>0</b>
-      </button>
-    </div>
-  </div>
-  <nav class="sh-nav site-nav" aria-label="Principal">
-    <a href="./">Início</a>
-    <div class="sh-drop">
-      <a href="#catalogo" class="sh-drop-btn" aria-haspopup="true" aria-expanded="false">Produtos <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></a>
-      <div class="sh-drop-panel" id="drop-cats"></div>
-    </div>
-    <a href="#loja">Loja 3D</a>
-    <a href="#" id="nav-whats" target="_blank" rel="noopener">WhatsApp</a>
-  </nav>
-  <div class="sh-search" id="search" hidden>
-    <form class="sh-search-form" role="search" onsubmit="return false">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-      <input id="search-q" type="search" placeholder="O que você está buscando?" autocomplete="off" aria-label="Buscar produtos">
-      <button class="sh-icon" type="button" id="search-close" aria-label="Fechar busca">×</button>
-    </form>
-    <ul class="sh-results" id="search-results"></ul>
-  </div>
-</header>
-
-<!-- menu do celular -->
-<div class="drawer" id="drawer" hidden>
-  <nav class="drawer-panel" aria-label="Menu">
-    <div class="drawer-top"><img src="/brand/vs-logo.svg" alt="" width="48" height="48"><button class="sh-icon" type="button" id="menu-close" aria-label="Fechar menu">×</button></div>
-    <a href="./">Início</a>
-    <p class="drawer-h">Produtos</p>
-    <div id="drawer-cats"></div>
-    <a href="#loja">Loja 3D</a>
-    <a href="#" id="drawer-whats" target="_blank" rel="noopener">WhatsApp</a>
-    <a href="#visite">Endereço e horário</a>
-  </nav>
-</div>
-
 <main class="shop-main" data-head="dark">
   <h1 class="visually-hidden">VS Imports: a loja que veste os artistas</h1>
 
@@ -133,9 +70,32 @@
 
   <!-- 3b. vídeos do Instagram da loja -->
   <section class="reels" id="reels" aria-labelledby="reels-t">
-    <h2 id="reels-t" class="shelf-t">No nosso Instagram</h2>
-    <p class="reels-sub"><a id="reels-handle" href="#" target="_blank" rel="noopener">@vsimpoorts__</a> · provador, lançamentos e os looks da semana</p>
+    <div class="ig-head">
+      <h2 id="reels-t"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor"/></svg>vsimpoorts__</h2>
+      <p>Estamos no Instagram</p>
+      <a class="ig-follow" id="reels-handle" href="#" target="_blank" rel="noopener">Siga-nos</a>
+    </div>
     <div class="shelf-wrap"><ul class="shelf-row reels-row" id="reels-row"></ul></div>
+  </section>
+
+  <!-- 3c. marcas e criador -->
+  <section class="story" aria-label="Sobre a VS Imports">
+    <div class="story-row">
+      <a class="story-pic" href="#catalogo"><img src="/img/banners/melhores-marcas.webp" alt="VS Imports: as melhores marcas você encontra aqui (Lacoste, Zara, Casa Blanca, Tommy Hilfiger, Armani Exchange)" loading="lazy" width="1600" height="751"></a>
+      <div class="story-copy">
+        <h2>As melhores marcas</h2>
+        <p>Somente na <b>VSIMPORTS</b> você encontra as melhores.</p>
+        <a class="story-link" href="#catalogo">Ver as peças</a>
+      </div>
+    </div>
+    <div class="story-row rev">
+      <a class="story-pic" href="quem-somos.html"><img src="/img/banners/fundador.webp" alt="Rauan Sobota, fundador da VSIMPORTS" loading="lazy" width="1600" height="751"></a>
+      <div class="story-copy">
+        <h2>Sobre o criador da VSIMPORTS</h2>
+        <p><b>Rauan Sobota</b>, founder &amp; expert. Paixão por qualidade, compromisso com você.</p>
+        <a class="story-link" href="quem-somos.html">Conheça a nossa história</a>
+      </div>
+    </div>
   </section>
 
   <!-- 4. prateleiras -->

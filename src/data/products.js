@@ -32,6 +32,24 @@ export const CATEGORIES = [
   { id: 'acessorios', name: 'Acessórios', blurb: 'Relógios, cintos, perfumes e carteiras.' },
 ];
 
+// Separação por marca/tipo dentro de cada linha (menu "Produtos"):
+// a peça entra na subcategoria quando o nome tem uma das palavras-chave.
+const sub = (id, name, ...kw) => ({ id, name, kw });
+export const SUBCATS = {
+  camisetas: [sub('lacoste', 'Lacoste', 'lacoste', 'lcst'), sub('boss', 'Boss', 'boss'), sub('armani', 'Armani', 'armani'), sub('casa-blanca', 'Casa Blanca', 'casa blanca'),
+    sub('zara', 'Zara', 'zara'), sub('lv', 'LV', 'louis vuitton', ' lv'), sub('diesel', 'Diesel', 'diesel'), sub('tommy', 'Tommy Hilfiger', 'tommy'),
+    sub('le-coq', 'Le Coq Sportif', 'le coq'), sub('balmain', 'Balmain', 'balmain'), sub('fred-perry', 'Fred Perry', 'fred perry'), sub('selecao', 'Seleção', 'selecao')],
+  polos: [sub('lacoste', 'Lacoste', 'lacoste'), sub('tommy', 'Tommy Hilfiger', 'tommy'), sub('zara', 'Zara', 'zara')],
+  bermudas: [sub('jordan', 'Jordan', 'jordan'), sub('griffe', 'Griffe', 'gucci', 'balmain', 'casa blanca', 'lacoste', 'tommy', 'ralph'), sub('nike', 'Nike', 'nike', ' nk'), sub('linho', 'Linho', 'linho'), sub('tactel', 'Tactel', 'tactel'), sub('jeans', 'Bermuda Jeans', 'jeans')],
+  calcas: [sub('alfaiataria', 'Calça Alfaiataria', 'alfaiataria'), sub('brow', 'Brow Jeans', 'brow'), sub('city', 'City Denim', 'city denim'), sub('lipse', 'Lipse Jeans', 'lipse')],
+  conjuntos: [sub('casa-blanca', 'Casa Blanca', 'casa blanca'), sub('fred-perry', 'Fred Perry', 'fred perry'), sub('nike', 'Nike', 'nike', 'syna'), sub('selecao', 'Seleção', 'selecao')],
+  inverno: [sub('jaquetas', 'Jaquetas', 'jaqueta'), sub('moletom', 'Moletom', 'moletom', 'moletinho'), sub('sueter', 'Suéter', 'sueter')],
+  bones: [],
+  calcados: [sub('chinelos', 'Chinelos', 'slide', 'chinelo'), sub('tenis', 'Tênis', 'tenis', 'mcqueen', 'ferrari', 'mizuno', 'dunk')],
+  acessorios: [sub('cintos', 'Cintos', 'cinto'), sub('necessaire', 'Necessaire', 'necessaire'), sub('bag', 'Bag', ' bag', 'bolsa'), sub('porta-cartao', 'Porta Cartão', 'porta cartao'),
+    sub('cuecas', 'Cuecas de Griffe', 'cueca'), sub('carteira', 'Carteira', 'carteira'), sub('perfumes', 'Perfumes Brand 50ML', 'perfume'), sub('relogios', 'Relógios', 'relogio')],
+};
+
 // cor principal (hex), cor de detalhe e texto da estampa
 export const PRODUCTS = [
   { id: 'camiseta-vs-classic', cat: 'camisetas', model: 'tee', name: 'Camiseta VS Classic', price: 129.9,

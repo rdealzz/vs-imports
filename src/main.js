@@ -1,12 +1,13 @@
 // Home da VS Imports no formato de loja virtual: avisos, cabeçalho com busca,
 // carrossel, categorias, prateleiras com COMPRAR, loja 3D, catálogo e endereço.
-import { PRODUCTS, CATEGORIES, STORE, byId, brl, img, asset } from './data/products.js';
+import { PRODUCTS, CATEGORIES, SUBCATS, STORE, byId, brl, img, asset } from './data/products.js';
 import { initBag, bag } from './ui/bag.js';
 import { initAuth } from './ui/auth.js';
 import { loadCatalog, LOCAL_CATALOG } from './data/catalog.js';
 import { cardHTML, productUrl } from './ui/card.js';
 import { shopCardHTML } from './ui/shopcard.js';
 import { renderFooter } from './ui/footer.js';
+import { mountShopHead, inSub } from './ui/shophead.js';
 import { reduceMotion, isMobile } from './three/perf.js';
 import { supabase, hasSupabase } from './lib/supabase.js';
 
@@ -30,72 +31,10 @@ function toast(html) {
   clearTimeout(toastT); toastT = setTimeout(() => { t.classList.remove('on'); setTimeout(() => (t.hidden = true), 300); }, 2600);
 }
 
-/* ---------------- barra de avisos ---------------- */
-{
-  const items = $$('#adbar li'); let i = 0, timer = 0;
-  const show = (k) => { i = (k + items.length) % items.length; items.forEach((li, n) => li.classList.toggle('on', n === i)); };
-  const auto = () => { clearInterval(timer); if (!reduceMotion) timer = setInterval(() => show(i + 1), 4200); };
-  $$('[data-ad]').forEach((b) => b.addEventListener('click', () => { show(i + +b.dataset.ad); auto(); }));
-  auto();
-}
-
-/* ---------------- cabeçalho: categorias, WhatsApp, menu e busca ---------------- */
-const catLinks = CATEGORIES.map((c) => `<a href="#catalogo" data-filter="${c.id}">${c.name}</a>`).join('');
-$('#drop-cats').innerHTML = catLinks + '<a href="#catalogo" data-filter="todos" class="all">Ver todos os produtos</a>';
-$('#drawer-cats').innerHTML = catLinks;
-['#nav-whats', '#drawer-whats'].forEach((s) => ($(s).href = wa('Olá, VS Imports! Quero tirar uma dúvida.')));
-$('#duo-vip').href = STORE.vipGroup;
-
-// menu "Produtos": abre no hover (mouse) e no clique/teclado
-{
-  const drop = $('.sh-drop'), btn = $('.sh-drop-btn');
-  const set = (on) => { drop.classList.toggle('open', on); btn.setAttribute('aria-expanded', String(on)); };
-  drop.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') set(true); });
-  drop.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') set(false); });
-  btn.addEventListener('click', (e) => { if (matchMedia('(hover: none)').matches || e.detail === 0) { e.preventDefault(); set(!drop.classList.contains('open')); } });
-  drop.addEventListener('focusout', (e) => { if (!drop.contains(e.relatedTarget)) set(false); });
-  addEventListener('keydown', (e) => { if (e.key === 'Escape') set(false); });
-}
-
-// gaveta do celular
-{
-  const d = $('#drawer'), ob = $('#menu-open');
-  const set = (on) => {
-    if (on) { d.hidden = false; requestAnimationFrame(() => d.classList.add('on')); lockScroll(true); $('#menu-close').focus(); }
-    else { d.classList.remove('on'); lockScroll(false); setTimeout(() => (d.hidden = true), 280); ob.focus({ preventScroll: true }); }
-    ob.setAttribute('aria-expanded', String(on));
-  };
-  ob.addEventListener('click', () => set(true));
-  $('#menu-close').addEventListener('click', () => set(false));
-  d.addEventListener('click', (e) => { if (e.target === d || e.target.closest('a')) set(false); });
-  addEventListener('keydown', (e) => { if (e.key === 'Escape' && !d.hidden) set(false); });
-}
-
-// busca: filtra o catálogo enquanto digita
+/* ---------------- topo da loja (avisos, cabeçalho, mega menu, busca) ---------------- */
 let catalog = LOCAL_CATALOG;
-{
-  const box = $('#search'), q = $('#search-q'), out = $('#search-results'), ob = $('#search-open');
-  const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  const set = (on) => { box.hidden = !on; ob.setAttribute('aria-expanded', String(on)); if (on) q.focus(); else { q.value = ''; out.innerHTML = ''; } };
-  ob.addEventListener('click', () => set(box.hidden));
-  $('#search-close').addEventListener('click', () => set(false));
-  q.addEventListener('input', () => {
-    const t = norm(q.value.trim());
-    if (!t) { out.innerHTML = ''; return; }
-    const cat = (p) => CATEGORIES.find((c) => c.id === p.cat)?.name || '';
-    const hits = catalog.filter((p) => norm(`${p.name} ${cat(p)}`).includes(t)).slice(0, 6);
-    out.innerHTML = hits.length ? hits.map((p) => `<li><a href="${productUrl(p.id)}"><img src="${p.photos?.[0] || img(p.id, 'card-sm')}" alt="" width="48" height="60"><span>${esc(p.name)}<small>${cat(p)}</small></span><b>${brl(p.finalPrice)}</b></a></li>`).join('')
-      : `<li class="none">Nada encontrado para “${esc(q.value.trim())}”. <a href="${wa(`Olá! Vocês têm ${q.value.trim()}?`)}" target="_blank" rel="noopener">Pergunte no WhatsApp</a></li>`;
-  });
-  addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) set(false); });
-}
-
-// cabeçalho encolhe ao rolar
-{
-  const head = $('.shop-head');
-  const on = () => head.classList.toggle('scrolled', scrollY > 40);
-  addEventListener('scroll', on, { passive: true }); on();
-}
+const head = mountShopHead({ home: true, getCatalog: () => catalog, onFilter: (cat, sub) => { setFilter(cat, sub); $('#catalogo').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' }); } });
+$('#duo-vip').href = STORE.vipGroup;
 
 /* ---------------- carrossel de banners ---------------- */
 {
@@ -345,29 +284,31 @@ function buildStoreList() {
 const grid = $('#grid'), filters = $('#filters');
 let currentFilter = 'todos';
 filters.innerHTML = [{ id: 'todos', name: 'Todos' }, ...CATEGORIES].map((c, i) => `<button class="chip" data-f="${c.id}" aria-pressed="${!i}">${c.name}</button>`).join('');
-function setFilter(id) {
-  currentFilter = id;
+let currentSub = '';
+function setFilter(id, subId = '') {
+  currentFilter = id; currentSub = subId;
+  const sub = (SUBCATS[id] || []).find((x) => x.id === subId);
   $$('[data-f]', filters).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === id)));
-  $$('.pcard', grid).forEach((c) => { c.hidden = id !== 'todos' && c.dataset.cat !== id; });
+  $$('.pcard', grid).forEach((c) => { const p = catalog.find((x) => x.id === c.dataset.id); c.hidden = (id !== 'todos' && c.dataset.cat !== id) || (sub && p && !inSub(p, sub)); });
+  const cat = CATEGORIES.find((c) => c.id === id);
+  $('#cat-t').textContent = sub ? `${cat.name} · ${sub.name}` : cat ? cat.name : 'Todos os produtos';
 }
 filters.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) setFilter(b.dataset.f); });
-document.addEventListener('click', (e) => {
-  const a = e.target.closest('[data-filter]'); if (!a) return;
-  e.preventDefault(); setFilter(a.dataset.filter);
-  $('#catalogo').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
-});
 function renderAll(list) {
   catalog = list;
   renderCats(list);
   if ($('#reels-row .reel-empty')) renderReels();
   filters.innerHTML = [{ id: 'todos', name: 'Todos' }, ...CATEGORIES.filter((c) => list.some((x) => x.cat === c.id))].map((c) => `<button class="chip" data-f="${c.id}" aria-pressed="${c.id === currentFilter}">${c.name}</button>`).join('');
   grid.innerHTML = list.map(shopCardHTML).join('');
-  setFilter(currentFilter);
+  setFilter(currentFilter, currentSub);
   fillShelves(list);
+  head.refresh(list);
 }
 // com banco: mostra esqueletos até o catálogo real chegar (sem piscar peças de demonstração)
 if (hasSupabase) { const sk = '<li class="pcard sk"><div class="pc-ph"></div><div class="pc-body"><i></i><i></i></div></li>'.repeat(6); $$('[data-shelf], #grid').forEach((u) => (u.innerHTML = sk)); } else renderAll(LOCAL_CATALOG);
 renderReels();
+// link vindo de outra página: ./?cat=camisetas&sub=lacoste#catalogo
+{ const q = new URLSearchParams(location.search); if (q.get('cat')) { currentFilter = q.get('cat'); currentSub = q.get('sub') || ''; } }
 // catálogo vivo do banco: preços, promoções, fotos, esgotados e peças novas
 loadCatalog().then(renderAll);
 initAuth();

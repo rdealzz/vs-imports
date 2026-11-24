@@ -297,3 +297,50 @@ body.shop { background: #0B0A08; }
 /* fotos reais (retrato) preenchem o card */
 .pc-ph img { object-position: 50% 40%; }
 .cats-row { justify-content: safe center; }
+
+/* ---------- mega menu "Produtos" (colunas por linha, como na loja antiga) ---------- */
+.shop-head .sh-drop { position: static; }
+.shop-head .sh-drop-panel.mega { left: 0; right: 0; top: 100%; transform: translateY(6px); min-width: 0; max-height: min(70vh, 560px); overflow-y: auto; display: block;
+  padding: 26px max(var(--gutter), calc((100vw - 1320px) / 2)); border-radius: 0; border-left: 0; border-right: 0; background: rgba(11, 10, 8, .98); column-count: 5; column-gap: 32px; }
+.shop-head .sh-drop.open .sh-drop-panel.mega { transform: none; }
+.mm-group { break-inside: avoid; display: grid; gap: 2px; margin-bottom: 18px; }
+.mega .mm-group a { padding: 6px 0; border-radius: 0; font-size: 14px; color: var(--gold-light); background: none; }
+.mega .mm-group a:hover, .mega .mm-group a:focus-visible { background: none; color: #F7F5F0; }
+.mega .mm-group a.mm-h { font-weight: 800; font-size: 14px; color: var(--gold-light); margin-bottom: 2px; letter-spacing: .02em; }
+.mega .mm-group a:not(.mm-h) { color: #E2D2A8; font-weight: 500; }
+@media (max-width: 1100px) { .shop-head .sh-drop-panel.mega { column-count: 4; } }
+/* menu: 6 itens cabem em uma linha */
+.sh-nav { gap: clamp(14px, 2.2vw, 34px); }
+.sh-nav > a, .sh-drop-btn { font-size: 12.5px; letter-spacing: .08em; color: var(--gold-light); }
+.sh-nav > a:hover, .sh-drop-btn:hover { color: #F7F5F0; }
+/* gaveta: categorias que abrem */
+.dr-cat summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 13px 0 13px 14px; border-bottom: 1px solid var(--line); color: var(--ink); font-size: 16px; }
+.dr-cat summary::-webkit-details-marker { display: none; }
+.dr-cat summary::after { content: "+"; color: var(--gold-light); font-size: 20px; line-height: 1; }
+.dr-cat[open] summary::after { content: "−"; }
+.dr-cat a, #drawer-cats .dr-single { display: block; }
+.drawer-panel .dr-cat a { padding: 10px 0 10px 28px !important; font-size: 15px !important; color: var(--ink-2) !important; text-transform: none !important; letter-spacing: 0 !important; font-weight: 500 !important; }
+
+/* ---------- Instagram: cabeçalho "Siga-nos" ---------- */
+.ig-head { display: grid; justify-items: center; gap: 6px; margin-bottom: 28px; padding: 0 var(--gutter); text-align: center; }
+.ig-head h2 { display: inline-flex; align-items: center; gap: 10px; margin: 0; font-size: clamp(22px, 2.4vw, 30px); font-weight: 800; letter-spacing: .02em; color: var(--gold-light); }
+.ig-head h2 svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.ig-head p { margin: 0; color: var(--ink); font-size: 14.5px; }
+.ig-follow { margin-top: 8px; display: inline-flex; align-items: center; min-height: 36px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--gold); color: var(--gold-light); font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; text-decoration: none; transition: background .25s, color .25s; }
+.ig-follow:hover { background: var(--gold-grad); color: #12110E; }
+.reels-sub { display: none; }
+
+/* ---------- marcas e criador (linhas alternadas) ---------- */
+.story { max-width: 1200px; margin: 0 auto; padding: clamp(44px, 6vw, 80px) var(--gutter) 10px; display: grid; gap: clamp(28px, 4vw, 56px); }
+.story-row { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: clamp(24px, 5vw, 70px); align-items: center; }
+.story-row.rev .story-pic { order: 2; }
+.story-pic { display: block; border-radius: 18px; overflow: hidden; border: 1px solid rgba(226, 196, 132, .22); box-shadow: 0 30px 60px -34px rgba(0, 0, 0, .9); }
+.story-pic img { width: 100%; height: auto; display: block; transition: transform 1.2s var(--ease-out); }
+.story-pic:hover img { transform: scale(1.03); }
+.story-copy { text-align: center; }
+.story-copy h2 { margin: 0 0 10px; font-size: clamp(20px, 2.2vw, 28px); font-weight: 800; letter-spacing: .02em; text-transform: uppercase; color: var(--ink); }
+.story-copy p { margin: 0 auto; max-width: 36ch; color: var(--ink-2); font-size: 15px; line-height: 1.6; }
+.story-copy b { color: var(--gold-light); }
+.story-link { display: inline-block; margin-top: 16px; color: var(--gold-light); font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; text-decoration: none; border-bottom: 1px solid rgba(226, 196, 132, .45); padding-bottom: 3px; }
+.story-link:hover { color: #F7F5F0; border-color: #F7F5F0; }
+@media (max-width: 760px) { .story-row, .story-row.rev { grid-template-columns: 1fr; } .story-row.rev .story-pic { order: 0; } }

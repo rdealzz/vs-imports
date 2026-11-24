@@ -30,7 +30,7 @@ export function renderFooter(el = document.getElementById('rodape'), { home = ''
   </div>
   <div class="foot-promise wrap">
     <div><span class="seal" aria-hidden="true">${SEAL.truck}</span><b>Entregamos para todo o Brasil</b><span>Ou retire no mesmo dia na loja do Capão Raso.</span></div>
-    <div><span class="seal" aria-hidden="true">${SEAL.swap}</span><b>Troca em até 30 dias</b><span>Na loja ou pelo WhatsApp, sem burocracia.</span></div>
+    <div><span class="seal" aria-hidden="true">${SEAL.swap}</span><b>Troca em até 7 dias</b><span>Na loja ou pelo WhatsApp, sem burocracia.</span></div>
     <div><span class="seal" aria-hidden="true">${SEAL.lock}</span><b>Pagamento seguro</b><span>Pix, cartão em até 3x sem juros e dinheiro na loja.</span></div>
     <div><span class="seal" aria-hidden="true">${SEAL.gem}</span><b>Linha premium e importada</b><span>Cada peça é conferida antes de ir para a arara.</span></div>
   </div>
@@ -46,9 +46,11 @@ export function renderFooter(el = document.getElementById('rodape'), { home = ''
     </div>
     <nav class="foot-col" aria-label="Loja">
       <h3>Loja</h3>
+      <a href="${home}#catalogo">Produtos</a>
       <a href="${home}#loja">Loja 3D</a>
-      <a href="${home}#colecoes">Coleções</a>
-      <a href="${home}#catalogo">Catálogo</a>
+      <a href="rastreio.html">Rastreie o seu pedido</a>
+      <a href="perguntas-frequentes.html">Perguntas frequentes</a>
+      <a href="quem-somos.html">Quem somos nós?</a>
       <a href="${home}#visite">Endereço</a>
     </nav>
     <nav class="foot-col" aria-label="Políticas">

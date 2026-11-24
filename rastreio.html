@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rastreie o seu pedido | VS Imports</title>
+<meta name="description" content="Acompanhe a entrega do seu pedido da VS Imports pelos Correios ou Jadlog.">
+<meta name="theme-color" content="#0B0A08">
+<link rel="icon" href="/brand/vs-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/styles/base.css">
+<link rel="stylesheet" href="/src/styles/shop.css">
+<link rel="stylesheet" href="/src/styles/pages.css">
+</head>
+<body class="shop page" data-page="rastreio">
+<main class="shop-main info-main" data-head="dark">
+  <article class="info wrap narrow">
+    <header class="info-head">
+      <span class="ico ring big"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8.5 4.5v9L12 21l-8.5-4.5v-9z"/><path d="m3.5 7.5 8.5 4.5 8.5-4.5M12 12v9M7.8 5.3l8.5 4.5"/></svg></span>
+      <h1 class="caps">Rastreie o seu pedido</h1>
+      <span class="crown-rule" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 18h18M4 16 3 7l5 4 4-6 4 6 5-4-1 9z"/></svg></span>
+      <p>Digite o código de rastreio que enviamos no seu WhatsApp ou e-mail.</p>
+    </header>
+    <form class="track" id="track" novalidate>
+      <label class="visually-hidden" for="track-code">Código de rastreio</label>
+      <input id="track-code" name="code" autocomplete="off" autocapitalize="characters" placeholder="Ex.: AB123456789BR" maxlength="40" required>
+      <div class="track-acts">
+        <button class="btn-gold" type="submit" data-via="correios">Rastrear nos Correios</button>
+        <button class="ig-follow" type="submit" data-via="jadlog">Rastrear na Jadlog</button>
+      </div>
+      <p class="track-msg" id="track-msg" role="status" aria-live="polite"></p>
+    </form>
+    <div class="track-more">
+      <div><h2>Comprou pelo site?</h2><p>Entre na sua conta para ver o andamento dos seus pedidos.</p><button class="ig-follow" type="button" id="my-orders-btn">Ver meus pedidos</button></div>
+      <div><h2>Ainda sem código?</h2><p>O código chega assim que o pedido é postado. Se precisar, chame a gente.</p><a class="ig-follow" data-wa href="#" target="_blank" rel="noopener">Falar no WhatsApp</a></div>
+    </div>
+  </article>
+</main>
+
+<footer class="foot" id="rodape"></footer>
+
+<aside class="bag" id="bag" aria-label="Sacola" hidden>
+  <div class="bag-panel">
+    <header><h2>Sacola</h2><button class="round" data-bag-close aria-label="Fechar sacola">×</button></header>
+    <ul class="bag-list" id="bag-list"></ul>
+    <footer></footer>
+  </div>
+</aside>
+
+<script type="module" src="/src/pages.js"></script>
+</body>
+</html>
