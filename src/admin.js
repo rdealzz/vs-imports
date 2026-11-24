@@ -638,6 +638,43 @@ $('#rep-close').addEventListener('click', async () => {
 });
 
 /* ============================================================ ajustes */
+/* vídeos do Instagram da home */
+async function loadReels() {
+  const { data, error } = await supabase.from('home_reels').select('*').order('position').order('id');
+  if (error) { $('#reels-list').innerHTML = `<li class="muted">${friendly(error)}</li>`; return; }
+  $('#reels-list').innerHTML = data.length ? data.map((r, i) => `<li data-id="${r.id}"><span class="rl-n">${i + 1}</span><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url.replace(/^https:\/\/(www\.)?instagram\.com/, ''))}</a>
+      <span class="rl-act"><button type="button" class="pill sm" data-rmove="-1" ${i ? '' : 'disabled'} aria-label="Subir">↑</button><button type="button" class="pill sm" data-rmove="1" ${i < data.length - 1 ? '' : 'disabled'} aria-label="Descer">↓</button>
+      <button type="button" class="pill sm" data-rtoggle="${r.active ? 0 : 1}">${r.active ? 'Ocultar' : 'Mostrar'}</button><button type="button" class="pill sm danger" data-rdel>Excluir</button></span></li>`).join('')
+    : '<li class="muted">Nenhum vídeo ainda: a home mostra um convite para seguir o Instagram.</li>';
+  loadReels.rows = data;
+}
+$('#reels-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = e.target, raw = f.url.value.trim();
+  const m = raw.match(/instagram\.com\/(reels?|p|tv)\/([\w-]{5,})/);
+  if (!m) { toast('Cole um link de Reels ou post do Instagram.', true); return; }
+  const url = `https://www.instagram.com/${m[1] === 'reels' ? 'reel' : m[1]}/${m[2]}/`;
+  const pos = (loadReels.rows || []).reduce((t, r) => Math.max(t, r.position), 0) + 1;
+  const { error } = await supabase.from('home_reels').insert({ url, position: pos });
+  if (error) { toast(friendly(error), true); return; }
+  f.url.value = ''; toast('Vídeo adicionado à home'); loadReels();
+});
+$('#reels-list').addEventListener('click', async (e) => {
+  const li = e.target.closest('li[data-id]'); if (!li) return;
+  const rows = loadReels.rows || [], i = rows.findIndex((r) => r.id === +li.dataset.id), r = rows[i];
+  let error;
+  if (e.target.closest('[data-rdel]')) { if (!confirm('Excluir este vídeo da home?')) return; ({ error } = await supabase.from('home_reels').delete().eq('id', r.id)); }
+  else if (e.target.closest('[data-rtoggle]')) ({ error } = await supabase.from('home_reels').update({ active: !r.active }).eq('id', r.id));
+  else if (e.target.closest('[data-rmove]')) {
+    const o = rows[i + +e.target.closest('[data-rmove]').dataset.rmove]; if (!o) return;
+    // troca as posições (renumera para não haver empate)
+    const order = rows.map((x) => x.id); [order[i], order[rows.indexOf(o)]] = [order[rows.indexOf(o)], order[i]];
+    const res = await Promise.all(order.map((id, k) => supabase.from('home_reels').update({ position: k + 1 }).eq('id', id)));
+    error = res.find((x) => x.error)?.error;
+  } else return;
+  if (error) toast(friendly(error), true);
+  loadReels();
+});
 async function loadShipping() {
   const [{ data: cfg }, { data: zones }] = await Promise.all([supabase.from('store_settings').select('free_shipping_min').maybeSingle(), supabase.from('shipping_zones').select('*').order('sort')]);
   const f = $('#ship-form'); f.free.value = cfg?.free_shipping_min ?? 349.9;
@@ -654,7 +691,7 @@ $('#ship-form').addEventListener('submit', async (e) => {
   toast(err ? friendly(err) : 'Frete salvo', !!err); loadShipping();
 });
 async function loadSettings() {
-  loadShipping();
+  loadShipping(); loadReels();
   const { data } = await supabase.from('store_settings').select('month_start_day, monthly_goal').maybeSingle();
   $('#set-form').day.value = data?.month_start_day || 1; $('#set-form').goal.value = data?.monthly_goal ?? ''; previewPeriod();
   loadTeam();

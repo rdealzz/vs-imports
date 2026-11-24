@@ -8,6 +8,7 @@ import { cardHTML, productUrl } from './ui/card.js';
 import { shopCardHTML } from './ui/shopcard.js';
 import { renderFooter } from './ui/footer.js';
 import { reduceMotion, isMobile } from './three/perf.js';
+import { supabase, hasSupabase } from './lib/supabase.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -125,6 +126,33 @@ let catalog = LOCAL_CATALOG;
   $('#cats').innerHTML = CATEGORIES.map((c) => `<li><a href="#catalogo" data-filter="${c.id}"><span class="ci"><img src="${img(pick(c).id, 'card-sm')}" alt="" loading="lazy" width="480" height="600"></span><b>${c.name}</b></a></li>`).join('')
     + `<li><a href="#loja"><span class="ci ci-3d"><img src="${asset('loja-entrada-m')}" alt="" loading="lazy" width="900" height="1400"></span><b>Loja 3D</b></a></li>`
     + `<li><a href="#catalogo" data-filter="todos"><span class="ci ci-all"><img src="/brand/vs-icon.svg" alt="" width="60" height="60"></span><b>Ver tudo</b></a></li>`;
+}
+
+/* ---------------- vídeos do Instagram (links cadastrados no painel) ---------------- */
+// cada link vira o player oficial do Instagram, carregado só perto da tela
+const igCode = (url) => { const m = String(url).match(/instagram\.com\/(reels?|p|tv)\/([\w-]+)/); return m ? { kind: m[1] === 'p' ? 'p' : 'reel', code: m[2] } : null; };
+async function renderReels() {
+  const row = $('#reels-row');
+  $('#reels-handle').href = STORE.instagramUrl;
+  let links = [];
+  if (hasSupabase) {
+    const { data } = await supabase.from('home_reels').select('url').eq('active', true).order('position').order('id').limit(12);
+    links = (data || []).map((r) => igCode(r.url)).filter(Boolean);
+  }
+  if (links.length) {
+    row.innerHTML = links.map((l) => `<li class="reel" data-src="https://www.instagram.com/${l.kind}/${l.code}/embed/"><div class="reel-ph" aria-hidden="true"><span class="reel-play"></span></div></li>`).join('');
+    const io = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return; io.unobserve(e.target);
+      e.target.insertAdjacentHTML('beforeend', `<iframe src="${e.target.dataset.src}" title="Vídeo do Instagram da VS Imports" loading="lazy" allowtransparency="true" allow="encrypted-media; autoplay; clipboard-write; picture-in-picture" scrolling="no"></iframe>`);
+    }), { rootMargin: '0px 300px 400px 300px' });
+    $$('.reel', row).forEach((li) => io.observe(li));
+  } else {
+    // ainda sem links: cards com as peças levando para o perfil
+    const picks = [...PRODUCTS.filter((p) => p.featured), ...PRODUCTS.filter((p) => !p.featured)].slice(0, 6);
+    row.innerHTML = picks.map((p) => `<li class="reel reel-empty"><a href="${STORE.instagramUrl}" target="_blank" rel="noopener" aria-label="Ver vídeos de ${esc(p.name)} no Instagram"><img src="${img(p.id, 'mood')}" alt="" loading="lazy" width="900" height="1200"><span class="reel-play" aria-hidden="true"></span><span class="reel-cap">Assista no Instagram</span></a></li>`).join('')
+      + `<li class="reel reel-follow"><a href="${STORE.instagramUrl}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor"/></svg><b>Siga @${esc(STORE.instagram)}</b><span>Provador, lançamentos e os looks da semana</span></a></li>`;
+  }
+  updateArrows(row);
 }
 
 /* ---------------- prateleiras (carrossel horizontal) ---------------- */
@@ -330,6 +358,7 @@ function renderAll(list) {
   fillShelves(list);
 }
 renderAll(LOCAL_CATALOG);
+renderReels();
 // catálogo vivo do banco: preços, promoções, fotos, esgotados e peças novas
 loadCatalog().then(renderAll);
 initAuth();
