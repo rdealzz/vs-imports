@@ -44,6 +44,7 @@ $('#duo-vip').href = STORE.vipGroup;
   const go = (k) => {
     i = (k + slides.length) % slides.length;
     wrap.style.transform = `translateX(${-i * 100}%)`;
+    if (matchMedia('(max-width: 760px)').matches) wrap.style.height = slides[i].offsetHeight + 'px'; else wrap.style.height = '';
     slides.forEach((s, n) => { s.classList.toggle('on', n === i); s.inert = n !== i; });
     $$('button', dots).forEach((b, n) => b.setAttribute('aria-selected', String(n === i)));
   };
@@ -57,6 +58,8 @@ $('#duo-vip').href = STORE.vipGroup;
   $('#slider').addEventListener('pointerenter', () => clearInterval(timer));
   $('#slider').addEventListener('pointerleave', auto);
   go(0); auto();
+  addEventListener('resize', () => go(i));
+  $('.cover-img')?.addEventListener('load', () => go(i));
 }
 
 /* ---------------- categorias em círculo ---------------- */
@@ -86,7 +89,7 @@ async function renderReels() {
     }), { rootMargin: '0px 300px 400px 300px' });
     $$('.reel', row).forEach((li) => io.observe(li));
   } else {
-    // ainda sem links: cards com as peças levando para o perfil
+    // ainda sem links: cards com fotos reais das peças levando para o perfil + convite
     const real = catalog.filter((p) => p.photos?.length && p.available);
     const picks = real.length ? real.slice(0, 6) : [...PRODUCTS.filter((p) => p.featured), ...PRODUCTS.filter((p) => !p.featured)].slice(0, 6);
     row.innerHTML = picks.map((p) => `<li class="reel reel-empty"><a href="${STORE.instagramUrl}" target="_blank" rel="noopener" aria-label="Ver vídeos de ${esc(p.name)} no Instagram"><img src="${p.photos?.[1] || p.photos?.[0] || img(p.id, 'mood')}" alt="" loading="lazy" width="900" height="1200"><span class="reel-play" aria-hidden="true"></span><span class="reel-cap">Assista no Instagram</span></a></li>`).join('')

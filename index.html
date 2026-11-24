@@ -25,7 +25,13 @@
   <!-- 1. carrossel de banners -->
   <section class="slider" id="slider" aria-roledescription="carrossel" aria-label="Destaques">
     <div class="slides" id="slides">
-      <article class="slide s-brand" aria-roledescription="slide" aria-label="1 de 3">
+      <article class="slide s-cover" aria-roledescription="slide" aria-label="1 de 4">
+        <a href="#catalogo" class="cover-link" aria-label="Compre agora e ganhe 5% OFF com o cupom PRIMEIRACOMPRA. Frete grátis. As mesmas peças dos artistas.">
+          <img class="cover-blur" src="/img/banners/capa-principal.webp" alt="" aria-hidden="true" width="1898" height="829">
+          <img class="cover-img" src="/img/banners/capa-principal.webp" alt="Compre agora e ganhe 5% OFF · Frete grátis · As mesmas peças dos artistas" width="1898" height="829" fetchpriority="high">
+        </a>
+      </article>
+      <article class="slide s-brand" aria-roledescription="slide" aria-label="2 de 4">
         <img class="slide-bg" src="/img/loja-geral.webp" alt="" width="1600" height="1000" fetchpriority="high">
         <div class="slide-copy">
           <img class="slide-logo" src="/brand/vs-logo.svg" alt="" width="120" height="120">
@@ -34,7 +40,7 @@
           <a class="btn-gold" href="#mais-vendidos">Ver as peças</a>
         </div>
       </article>
-      <article class="slide s-ship" aria-roledescription="slide" aria-label="2 de 3">
+      <article class="slide s-ship" aria-roledescription="slide" aria-label="3 de 4">
         <div class="slide-copy">
           <svg class="slide-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>
           <p class="slide-kicker">Entregamos para todo o Brasil</p>
@@ -43,7 +49,7 @@
         </div>
         <div class="slide-pics" aria-hidden="true"><img src="/img/tenis-runner-card.webp" alt="" width="800" height="1000"><img src="/img/camiseta-artistas-card.webp" alt="" width="800" height="1000"><img src="/img/bone-trucker-card.webp" alt="" width="800" height="1000"></div>
       </article>
-      <article class="slide s-first" aria-roledescription="slide" aria-label="3 de 3">
+      <article class="slide s-first" aria-roledescription="slide" aria-label="4 de 4">
         <img class="slide-bg" src="/img/capa-loja.webp" alt="" width="1500" height="1900">
         <div class="slide-copy">
           <p class="slide-kicker">Primeira compra pelo site</p>
@@ -55,6 +61,13 @@
     <button class="slider-arrow prev" type="button" data-sl="-1" aria-label="Banner anterior">‹</button>
     <button class="slider-arrow next" type="button" data-sl="1" aria-label="Próximo banner">›</button>
     <div class="slider-dots" id="slider-dots" role="tablist" aria-label="Escolher banner"></div>
+  </section>
+
+  <!-- 1b. banners das linhas (como na loja antiga) -->
+  <section class="cbanners" aria-label="Linhas em destaque">
+    <a class="cbanner" href="#catalogo" data-filter="camisetas"><img src="/img/banners/banner-camisetas.webp" alt="" loading="lazy" width="1080" height="1920"><span><small>Coleção</small><b>Camisetas</b><i>Ver peças →</i></span></a>
+    <a class="cbanner" href="#catalogo" data-filter="bermudas"><img src="/img/banners/banner-bermudas.webp" alt="" loading="lazy" width="1080" height="1920"><span><small>Coleção</small><b>Bermudas</b><i>Ver peças →</i></span></a>
+    <a class="cbanner" href="#catalogo" data-filter="inverno" data-sub="jaquetas"><img src="/img/banners/banner-jaquetas.webp" alt="" loading="lazy" width="1080" height="1920"><span><small>Inverno</small><b>Jaquetas</b><i>Ver peças →</i></span></a>
   </section>
 
   <!-- 2. categorias em círculo -->
