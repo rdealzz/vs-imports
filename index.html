@@ -31,30 +31,52 @@
           <img class="cover-img" src="/img/banners/capa-principal.webp" alt="Compre agora e ganhe 5% OFF · Frete grátis · As mesmas peças dos artistas" width="1898" height="829" fetchpriority="high">
         </a>
       </article>
-      <article class="slide s-brand" aria-roledescription="slide" aria-label="2 de 4">
-        <img class="slide-bg" src="/img/loja-geral.webp" alt="" width="1600" height="1000" fetchpriority="high">
+      <article class="slide s-ship" aria-roledescription="slide" aria-label="2 de 4">
+        <div class="ship-bg" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="slide-copy ship-copy">
+          <p class="slide-kicker"><span class="live-dot" aria-hidden="true"></span>Enviamos para todo o Brasil</p>
+          <h2>Frete <em>grátis</em></h2>
+          <p class="ship-sub">em compras a partir de <b data-free-min>R$ 349,90</b></p>
+          <div class="ship-meter" aria-hidden="true">
+            <div class="sm-track"><i class="sm-fill"></i><span class="sm-truck"><svg viewBox="0 0 24 24"><path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg></span></div>
+            <div class="sm-legend"><span>Sua sacola</span><span class="sm-goal">Frete grátis</span></div>
+          </div>
+          <ul class="ship-facts">
+            <li><b>Correios</b> e <b>Jadlog</b></li>
+            <li>Retire <b>no mesmo dia</b> no Capão Raso</li>
+            <li><b>3x</b> sem juros · <b>Pix</b></li>
+          </ul>
+          <a class="btn-gold" href="#mais-vendidos">Aproveitar agora</a>
+        </div>
+        <div class="ship-stage" id="ship-stage" aria-hidden="true">
+          <div class="ship-fan" id="ship-fan"></div>
+          <div class="ship-box"><svg viewBox="0 0 64 64"><path d="M32 6 56 18v28L32 58 8 46V18z" /><path d="M8 18l24 12 24-12M32 30v28M20 12l24 12"/></svg><span>Pedido<br><b>enviado</b></span></div>
+          <div class="ship-chip c1"><b>0,00</b><small>frete</small></div>
+        </div>
+      </article>
+      <article class="slide s-first" aria-roledescription="slide" aria-label="3 de 4">
+        <div class="first-wall" id="first-wall" aria-hidden="true"><div class="fw-col"></div><div class="fw-col"></div><div class="fw-col"></div><div class="fw-col"></div></div>
+        <div class="slide-copy first-copy">
+          <p class="slide-kicker">Primeira compra pelo site</p>
+          <div class="ticket">
+            <div class="tk-left"><span class="tk-pct">5<sup>%</sup></span><span class="tk-off">OFF</span></div>
+            <div class="tk-right"><small>Cupom de boas-vindas</small><b>Desconto automático</b><span>aplicado na sua 1ª compra ao criar a conta</span></div>
+          </div>
+          <ol class="first-steps">
+            <li><b>1</b>Crie sua conta com o WhatsApp</li>
+            <li><b>2</b>Escolha as peças</li>
+            <li><b>3</b>O desconto entra sozinho no checkout</li>
+          </ol>
+          <div class="first-acts"><button class="btn-gold" type="button" data-login>Criar conta e ganhar 5%</button><a class="ig-follow" href="#mais-vendidos">Ver as peças</a></div>
+        </div>
+      </article>
+      <article class="slide s-brand" aria-roledescription="slide" aria-label="4 de 4">
+        <img class="slide-bg" src="/img/banners/melhores-marcas.webp" alt="" width="1600" height="751" loading="lazy">
         <div class="slide-copy">
           <img class="slide-logo" src="/brand/vs-logo.svg" alt="" width="120" height="120">
           <p class="slide-kicker">Linha premium e importada</p>
           <h2>A loja que veste<br><em>os artistas.</em></h2>
           <a class="btn-gold" href="#mais-vendidos">Ver as peças</a>
-        </div>
-      </article>
-      <article class="slide s-ship" aria-roledescription="slide" aria-label="3 de 4">
-        <div class="slide-copy">
-          <svg class="slide-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>
-          <p class="slide-kicker">Entregamos para todo o Brasil</p>
-          <h2>Frete grátis<br><em>acima de R$ 349,90</em></h2>
-          <a class="btn-gold" href="#catalogo">Aproveitar</a>
-        </div>
-        <div class="slide-pics" aria-hidden="true"><img src="/img/tenis-runner-card.webp" alt="" width="800" height="1000"><img src="/img/camiseta-artistas-card.webp" alt="" width="800" height="1000"><img src="/img/bone-trucker-card.webp" alt="" width="800" height="1000"></div>
-      </article>
-      <article class="slide s-first" aria-roledescription="slide" aria-label="4 de 4">
-        <img class="slide-bg" src="/img/capa-loja.webp" alt="" width="1500" height="1900">
-        <div class="slide-copy">
-          <p class="slide-kicker">Primeira compra pelo site</p>
-          <h2><em>5% OFF</em><br>criando sua conta</h2>
-          <button class="btn-gold" type="button" data-login>Criar conta</button>
         </div>
       </article>
     </div>
@@ -114,14 +136,30 @@
   <!-- 4. prateleiras -->
   <section class="shelf" id="mais-vendidos" aria-labelledby="sh1"><h2 id="sh1" class="shelf-t">Mais vendidos</h2><div class="shelf-wrap"><ul class="shelf-row" data-shelf="mais"></ul></div></section>
 
-  <section class="duo" aria-label="Destaques da loja">
-    <a class="duo-card d-3d" href="#loja">
-      <img src="/img/loja-estante.webp" alt="" loading="lazy" width="1200" height="1200">
-      <span class="duo-copy"><small>Loja 3D</small><b>Passeie pela loja<br>antes de vir</b><i>Entrar na loja →</i></span>
+  <section class="duo2" aria-label="Destaques da loja">
+    <a class="d2 d2-3d" href="#loja">
+      <img class="d2-bg" src="/img/loja-estante.webp" alt="" loading="lazy" width="1200" height="1200">
+      <div class="d2-glass">
+        <p class="d2-kicker"><span class="live-dot" aria-hidden="true"></span>Tour 360° · ao vivo no site</p>
+        <h3>Passeie pela loja<br><em>antes de vir</em></h3>
+        <ul class="d2-stats"><li><b id="d2-pecas">187</b><span>peças no catálogo</span></li><li><b>5</b><span>ambientes</span></li><li><b>360°</b><span>para girar e aproximar</span></li></ul>
+        <div class="d2-thumbs" id="d2-thumbs"></div>
+        <span class="d2-cta">Entrar na loja 3D <i aria-hidden="true">→</i></span>
+      </div>
+      <span class="d2-badge" aria-hidden="true">3D</span>
     </a>
-    <a class="duo-card d-vip" href="#" id="duo-vip" target="_blank" rel="noopener">
-      <img src="/img/loja-logo.webp" alt="" loading="lazy" width="1200" height="1200">
-      <span class="duo-copy"><small>Grupo VIP de ofertas</small><b>Lançamentos e promoções<br>antes de todo mundo</b><i>Entrar no grupo →</i></span>
+    <a class="d2 d2-vip" href="#" id="duo-vip" target="_blank" rel="noopener">
+      <div class="d2-vip-copy">
+        <p class="d2-kicker">Grupo VIP de ofertas</p>
+        <h3>Lançamentos e promoções<br><em>antes de todo mundo</em></h3>
+        <p class="d2-sub">Reposições, peças únicas e promoções relâmpago chegam primeiro no grupo do WhatsApp.</p>
+        <span class="d2-cta">Entrar no grupo <i aria-hidden="true">→</i></span>
+      </div>
+      <div class="phone" aria-hidden="true">
+        <div class="ph-top"><img src="/brand/vs-icon.svg" alt="" width="34" height="34"><div><b>VS Imports · VIP</b><small>grupo de ofertas</small></div></div>
+        <div class="ph-chat" id="vip-chat"></div>
+        <div class="ph-input"><span>Mensagem</span><i></i></div>
+      </div>
     </a>
   </section>
 
@@ -143,6 +181,7 @@
       <div class="stage-ui" id="stage-ui" hidden>
         <div class="views" role="group" aria-label="Ir para">
           <button class="chip" data-view="entrada" aria-pressed="true">Entrada</button>
+          <button class="chip" data-view="galeria" aria-pressed="false">Vitrine de fotos</button>
           <button class="chip" data-view="camisetas" aria-pressed="false">Camisetas</button>
           <button class="chip" data-view="logo" aria-pressed="false">Parede do logo</button>
           <button class="chip" data-view="estante" aria-pressed="false">Bonés e tênis</button>

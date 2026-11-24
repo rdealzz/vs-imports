@@ -488,7 +488,65 @@ export class Store3D {
     }
   }
 
-  itemFrom(hit) { return hit ? hit.object.userData.items[hit.instanceId] : null; }
+  itemFrom(hit) { return hit ? (hit.object.userData.item || hit.object.userData.items?.[hit.instanceId] || null) : null; }
+
+  /* ------------------ catálogo real: cada peça 3D aponta para um produto ------------------ */
+  // cada camiseta da arara abre uma camiseta real, cada tênis um tênis, cada boné um boné...
+  attachCatalog(list) {
+    const withPhoto = list.filter((p) => p.photos?.length);
+    const pool = (cats) => { const a = withPhoto.filter((p) => cats.includes(p.cat)); return [...a.filter((p) => p.available), ...a.filter((p) => !p.available)]; };
+    const pools = { tee: pool(['camisetas', 'polos']), shorts: pool(['bermudas']), shoe: pool(['calcados', 'tenis']), cap: pool(['bones']) };
+    const idx = { tee: 0, shorts: 0, shoe: 0, cap: 0 };
+    for (const it of this.items) {
+      if (it.kind === 'photo') continue;
+      const model = it.kind === 'pair' ? 'shoe' : it.kind === 'cap' ? 'cap' : byId(it.pid)?.model === 'shorts' ? 'shorts' : 'tee';
+      const pl = pools[model]; if (!pl.length) continue;
+      it.real = pl[idx[model]++ % pl.length];
+    }
+    this.addGallery(withPhoto.filter((p) => p.available));
+  }
+  // parede de fotos (lookbook) sobre o ripado: fotos reais, cada quadro clicável
+  addGallery(list) {
+    if (this._gallery || !list.length) return;
+    const L = this.L, R = L.rip;
+    const fw = 0.46, fh = 0.575, gap = 0.12;
+    const n = Math.max(0, Math.min(list.length, Math.floor((R.len + gap) / (fw + gap))));
+    if (!n) return;
+    this._gallery = new THREE.Group();
+    const loader = new THREE.TextureLoader(); loader.setCrossOrigin('anonymous');
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0xC8A45D, metalness: 0.85, roughness: 0.32 });
+    const backMat = new THREE.MeshStandardMaterial({ color: 0x0B0A08, roughness: 0.6 });
+    const start = R.mid - ((n - 1) * (fw + gap)) / 2;
+    // pick por categoria: mistura as linhas
+    const byCat = new Map(); list.forEach((p) => { if (!byCat.has(p.cat)) byCat.set(p.cat, []); byCat.get(p.cat).push(p); });
+    const mixed = []; for (let k = 0; mixed.length < n && k < 50; k++) for (const a of byCat.values()) if (a[k] && mixed.length < n) mixed.push(a[k]);
+    mixed.forEach((p, i) => {
+      const z = start + i * (fw + gap), x = L.xl + 0.06, y = 1.42;
+      const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = Math.PI / 2;
+      const back = new THREE.Mesh(new THREE.BoxGeometry(fw + 0.05, fh + 0.05, 0.03), backMat); back.position.z = -0.012;
+      const border = new THREE.Mesh(new THREE.BoxGeometry(fw + 0.07, fh + 0.07, 0.022), frameMat); border.position.z = -0.02;
+      const photoMat = new THREE.MeshBasicMaterial({ color: 0x222222, toneMapped: false });
+      const photo = new THREE.Mesh(new THREE.PlaneGeometry(fw, fh), photoMat); photo.position.z = 0.006;
+      loader.load(p.photos[0], (t) => {
+        t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+        // cobre o quadro 4:5 sem distorcer
+        const ar = t.image.width / t.image.height, fa = fw / fh;
+        if (ar > fa) { t.repeat.set(fa / ar, 1); t.offset.set((1 - fa / ar) / 2, 0); } else { t.repeat.set(1, ar / fa); t.offset.set(0, (1 - ar / fa) / 2); }
+        photoMat.map = t; photoMat.color.set(0xffffff); photoMat.needsUpdate = true; this.dirty = true;
+      });
+      g.add(border, back, photo);
+      this._gallery.add(g);
+      g.updateMatrixWorld(true);
+      const item = { mesh: photo, index: 0, pid: 'camiseta-vs-classic', ci: 0, pos: new THREE.Vector3(x + 0.02, y + 0.12, z), base: null, kind: 'photo', rotY: 0, real: p, group: g };
+      photo.userData.item = item;
+      this.items.push(item); this.pickables.push(photo);
+    });
+    // luz de galeria sobre os quadros
+    const wash = new THREE.SpotLight(0xFFE2B8, 6, 4, 0.9, 0.7, 1.4); wash.position.set(L.xl + 1.2, L.H - 0.05, R.mid); wash.target.position.set(L.xl, 1.4, R.mid);
+    this._gallery.add(wash, wash.target);
+    this.scene.add(this._gallery);
+    this.dirty = true;
+  }
 
   // tira a peça da arara (ou levanta da prateleira) ao passar o mouse
   setHover(item) {
@@ -500,6 +558,7 @@ export class Store3D {
   }
   applyHoverPose(item, k) {
     if (!item) return;
+    if (item.kind === 'photo') { item.group.position.x = this.L.xl + 0.06 + 0.06 * k; item.group.scale.setScalar(1 + 0.05 * k); return; }
     const off = new THREE.Vector3();
     if (item.kind === 'hang') off.x = (item.pos.x < 0 ? 0.16 : -0.16) * k;
     else off.y = 0.05 * k;
@@ -518,6 +577,7 @@ export class Store3D {
       entrada: { p: [0.1, 1.6, L.z0 - 0.35], t: [0, 1.25, L.zb] },
       camisetas: { p: [L.xr - 0.9, 1.65, L.arL.mid + 1.7], t: [L.xl + 0.4, 1.2, L.arL.mid - 0.4] },
       logo: { p: [L.xr - 0.8, 1.65, L.logoZ + 2.4], t: [L.xl, 1.75, L.logoZ - 0.2] },
+      galeria: { p: [L.xr - 1.1, 1.5, L.rip.mid + 0.35], t: [L.xl, 1.4, L.rip.mid] },
       estante: { p: [L.xl + 0.95, 1.6, L.est2.mid + 1.2], t: [L.xr, 1.55, L.est2.mid - 0.5] },
       caixa: { p: [L.xl + 1.05, 1.6, Math.min(L.caixa.z + 2.7, L.z0 - 0.4)], t: [L.caixa.x + 0.3, 1.1, L.zb] },
     };
@@ -571,6 +631,7 @@ export class Store3D {
     const b = this.bounds();
     const cam = [clamp(p.x + inward * 1.25, b.x0, b.x1), clamp(Math.max(1.35, p.y - 0.1), b.y0, b.y1), clamp(p.z + 0.9, b.z0, b.z1)];
     if (item.kind === 'stack') { cam[0] = p.x + 0.6; cam[1] = 1.55; cam[2] = p.z + 1.1; }
+    if (item.kind === 'photo') { cam[0] = clamp(p.x + 1.35, b.x0, b.x1); cam[1] = 1.45; cam[2] = p.z + 0.25; t[1] = p.y - 0.1; }
     this.flyTo(cam, t, dur, done);
   }
   getCamera() { return { p: this.camera.position.toArray(), t: this.orbit.target.toArray() }; }

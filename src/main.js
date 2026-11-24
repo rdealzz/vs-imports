@@ -10,6 +10,7 @@ import { renderFooter } from './ui/footer.js';
 import { mountShopHead, inSub } from './ui/shophead.js';
 import { reduceMotion, isMobile } from './three/perf.js';
 import { supabase, hasSupabase } from './lib/supabase.js';
+import { freeMin as freeMinValue } from './lib/shipping.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -61,6 +62,40 @@ $('#duo-vip').href = STORE.vipGroup;
   addEventListener('resize', () => go(i));
   $('.cover-img')?.addEventListener('load', () => go(i));
 }
+
+/* ---------------- capa: slides vivos com as peças reais ---------------- */
+function renderHeroLive(list) {
+  const real = list.filter((p) => p.photos?.length && p.available);
+  if (!real.length) return;
+  const pick = (cats, n) => { const out = []; for (const c of cats) { const p = real.find((x) => x.cat === c && !out.includes(x)); if (p) out.push(p); } for (const p of real) { if (out.length >= n) break; if (!out.includes(p)) out.push(p); } return out.slice(0, n); };
+  // frete grátis: leque de peças com preço
+  const fan = pick(['calcados', 'camisetas', 'bones', 'bermudas', 'polos'], 5);
+  $('#ship-fan').innerHTML = fan.map((p, i) => `<figure class="fan-card f${i}" style="--i:${i}"><img src="${p.photos[0]}" alt="" loading="lazy" width="600" height="750"><figcaption><span>${esc(p.name)}</span><b>${brl(p.finalPrice)}</b></figcaption></figure>`).join('');
+  // 5% OFF: parede de fotos em colunas que deslizam
+  const cols = $$('#first-wall .fw-col');
+  const pics = real.slice(0, 32);
+  cols.forEach((c, k) => { const mine = pics.filter((_, i) => i % cols.length === k); c.innerHTML = [...mine, ...mine].map((p) => `<img src="${p.photos[0]}" alt="" loading="lazy" width="400" height="500">`).join(''); });
+  // cards: Loja 3D e Grupo VIP
+  $('#d2-pecas').textContent = list.length;
+  $('#d2-thumbs').innerHTML = pick(['camisetas', 'bermudas', 'calcados', 'bones', 'polos', 'acessorios'], 6).map((p) => `<img src="${p.photos[0]}" alt="" loading="lazy" width="80" height="100">`).join('');
+  const promos = real.filter((p) => p.compareAt).slice(0, 3);
+  const news = real.filter((p) => !p.compareAt).slice(0, 2);
+  const msgs = [
+    ...promos.map((p) => `<div class="msg"><img src="${p.photos[0]}" alt="" loading="lazy" width="200" height="200"><p><b>🔥 Promoção relâmpago</b>${esc(p.name)}<br><s>${brl(p.compareAt)}</s> <strong>${brl(p.finalPrice)}</strong></p><time>agora</time></div>`),
+    ...news.map((p) => `<div class="msg"><img src="${p.photos[0]}" alt="" loading="lazy" width="200" height="200"><p><b>✨ Chegou reposição</b>${esc(p.name)} · <strong>${brl(p.finalPrice)}</strong></p><time>hoje</time></div>`),
+  ];
+  $('#vip-chat').innerHTML = msgs.join('');
+}
+// leque do frete grátis segue o mouse (só com mouse e sem "reduzir movimento")
+if (!reduceMotion && matchMedia('(hover: hover)').matches) {
+  const st = $('#ship-stage');
+  st?.closest('.slide').addEventListener('pointermove', (e) => {
+    const r = st.getBoundingClientRect();
+    st.style.setProperty('--rx', ((e.clientY - r.top) / r.height - 0.5) * -10 + 'deg');
+    st.style.setProperty('--ry', ((e.clientX - r.left) / r.width - 0.5) * 14 + 'deg');
+  });
+}
+freeMinValue().then((v) => $$('[data-free-min]').forEach((b) => (b.textContent = brl(v))));
 
 /* ---------------- categorias em círculo ---------------- */
 function renderCats(list) {
@@ -168,10 +203,11 @@ const loadStore = () => storeReady ??= (async () => {
       onView: (v) => $$('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v))),
       onHover: (it) => showTag(it, false),
       onSelect: (it) => showTag(it, true),
-      onOpen: (it) => openProduct(it.pid, it.ci),
+      onOpen: (it) => openProduct(it.pid, it.ci, it),
       onFrame: () => placeTag(),
     });
     store = await s3.ready;
+    if (catalog.some((p) => p.photos?.length)) store.attachCatalog(catalog);
     buildStoreList();
     return store;
   } catch (err) {
@@ -235,12 +271,21 @@ let tagItem = null;
 function showTag(it, selected) {
   tagItem = it;
   if (!it || !inside) { tag.hidden = true; tag.classList.remove('sel'); return; }
-  const p = byId(it.pid), c = storeCat(it.pid), real = catalog.find((x) => x.cat === c.id && x.photos?.length);
-  tag.querySelector('img').src = real?.photos[0] || img(p.id, it.ci ? 'card-' + it.ci : 'card');
-  tag.querySelector('b').textContent = c.name;
-  tag.querySelector('span').textContent = `${catalog.filter((x) => x.cat === c.id).length} peças${selected || isMobile ? '' : ' · clique para ver'}`;
-  tag.querySelector('a').textContent = `Ver ${c.name.toLowerCase()}`;
-  tag.querySelector('a').href = '#catalogo';
+  const r = it.real;
+  if (r) {
+    tag.querySelector('img').src = r.photos?.[0] || img(r.id, 'card-sm');
+    tag.querySelector('b').textContent = r.name;
+    tag.querySelector('span').innerHTML = `${r.compareAt ? `<s>${brl(r.compareAt)}</s> ` : ''}<strong>${brl(r.finalPrice)}</strong>${r.available ? '' : ' · esgotado'}${selected || isMobile ? '' : ' · clique para ver'}`;
+    tag.querySelector('a').textContent = 'Ver peça';
+    tag.querySelector('a').href = productUrl(r.id, '&de=loja');
+  } else {
+    const c = storeCat(it.pid);
+    tag.querySelector('img').src = img(it.pid, 'card-sm');
+    tag.querySelector('b').textContent = c.name;
+    tag.querySelector('span').textContent = `${catalog.filter((x) => x.cat === c.id).length} peças`;
+    tag.querySelector('a').textContent = `Ver ${c.name.toLowerCase()}`;
+    tag.querySelector('a').href = '#catalogo';
+  }
   tag.classList.toggle('sel', !!selected);
   tag.hidden = false;
   placeTag();
@@ -254,11 +299,17 @@ function placeTag() {
   tag.style.opacity = 1;
   tag.style.transform = `translate(${x}px, ${y}px)`;
 }
-tag.querySelector('a').addEventListener('click', (e) => { if (!tagItem) return; e.preventDefault(); openProduct(tagItem.pid); });
+tag.querySelector('a').addEventListener('click', (e) => { if (!tagItem) return; e.preventDefault(); openProduct(tagItem.pid, tagItem.ci, tagItem); });
 // a loja 3D usa peças ilustrativas: tocar numa peça abre as peças reais daquela linha
 const STORE_CAT = { tenis: 'calcados' };
 function storeCat(pid) { const id = STORE_CAT[byId(pid)?.cat] || byId(pid)?.cat; return CATEGORIES.find((c) => c.id === id) || CATEGORIES[0]; }
-function openProduct(id) {
+function openProduct(id, ci, it = tagItem) {
+  if (it?.real) {
+    if (store) sessionStorage.setItem('vs-store-cam', JSON.stringify(store.getCamera()));
+    $('#fade').classList.add('on');
+    setTimeout(() => { location.href = productUrl(it.real.id, '&de=loja'); }, reduceMotion ? 0 : 320);
+    return;
+  }
   const c = storeCat(id);
   exitStore();
   setTimeout(() => { setFilter(c.id); $('#catalogo').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' }); }, 400);
@@ -300,12 +351,14 @@ filters.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'
 function renderAll(list) {
   catalog = list;
   renderCats(list);
+  renderHeroLive(list);
   if ($('#reels-row .reel-empty')) renderReels();
   filters.innerHTML = [{ id: 'todos', name: 'Todos' }, ...CATEGORIES.filter((c) => list.some((x) => x.cat === c.id))].map((c) => `<button class="chip" data-f="${c.id}" aria-pressed="${c.id === currentFilter}">${c.name}</button>`).join('');
   grid.innerHTML = list.map(shopCardHTML).join('');
   setFilter(currentFilter, currentSub);
   fillShelves(list);
   head.refresh(list);
+  if (store && list.some((p) => p.photos?.length)) store.attachCatalog(list);
 }
 // com banco: mostra esqueletos até o catálogo real chegar (sem piscar peças de demonstração)
 if (hasSupabase) { const sk = '<li class="pcard sk"><div class="pc-ph"></div><div class="pc-body"><i></i><i></i></div></li>'.repeat(6); $$('[data-shelf], #grid').forEach((u) => (u.innerHTML = sk)); } else renderAll(LOCAL_CATALOG);
