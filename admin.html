@@ -175,9 +175,25 @@
             <label class="fld">Desconto %<input id="pdv-disc" type="number" inputmode="decimal" min="0" max="30" step="1" value="0"></label>
             <label class="fld">Entrega<select id="pdv-del"><option value="retirada">Retirou / na hora</option><option value="entrega">Enviar</option></select></label>
           </div>
+          <div class="cash" id="pdv-cash" hidden>
+            <label class="fld">Valor recebido em dinheiro<input id="pdv-received" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ex.: 200"></label>
+            <div class="cash-quick" id="cash-quick"></div>
+            <p class="change" id="pdv-change"></p>
+          </div>
           <div class="totals" id="pdv-totals"></div>
-          <button class="pill solid lg block" id="pdv-go" type="button">Registrar venda</button>
+          <button class="sale-done" id="pdv-go" type="button"><span class="sd-ico" aria-hidden="true">✓</span><span><b>Venda realizada</b><small id="pdv-go-sub">Escolha as peças</small></span></button>
           <p class="msg" id="pdv-msg" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="sold" id="sold" hidden>
+        <div class="sold-card" role="dialog" aria-modal="true" aria-labelledby="sold-t">
+          <div class="sold-check" aria-hidden="true">✓</div>
+          <h2 id="sold-t">Venda realizada!</h2>
+          <p id="sold-info"></p>
+          <p class="sold-change" id="sold-change"></p>
+          <p class="small" id="sold-stock"></p>
+          <div class="sold-acts" id="sold-acts"></div>
+          <button class="pill solid lg" type="button" id="sold-new">Nova venda</button>
         </div>
       </div>
     </section>

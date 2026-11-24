@@ -329,7 +329,29 @@ function renderCart() {
   const disc = Math.round(sub * pct) / 100;
   $('#pdv-totals').innerHTML = `<div><span>Subtotal</span><b>${brl(sub)}</b></div>${disc ? `<div><span>Desconto ${pct}%</span><b>− ${brl(disc)}</b></div>` : ''}<div class="g"><span>Total</span><b>${brl(sub - disc)}</b></div>`;
   $('#pdv-go').disabled = !cart.length;
+  saleTotal = sub - disc;
+  updateSaleButton();
 }
+// botão "Venda realizada": mostra a forma de pagamento e o total; dinheiro calcula o troco
+let saleTotal = 0;
+const PAY_LABEL = { pix: 'Pix', credito: 'Cartão de crédito', debito: 'Cartão de débito', dinheiro: 'Dinheiro' };
+function updateSaleButton() {
+  const pay = segVal('pdv-pay'), n = cart.reduce((t, i) => t + i.qty, 0);
+  $('#pdv-go-sub').textContent = cart.length ? `${PAY_LABEL[pay]} · ${n} peça${n > 1 ? 's' : ''} · ${brl(saleTotal)}` : 'Escolha as peças ou passe o leitor';
+  const cash = pay === 'dinheiro';
+  $('#pdv-cash').hidden = !cash || !cart.length;
+  if (cash && cart.length) {
+    const t = saleTotal, notes = [...new Set([t, Math.ceil(t / 10) * 10, Math.ceil(t / 50) * 50, Math.ceil(t / 100) * 100])].filter((v) => v >= t).slice(0, 4);
+    $('#cash-quick').innerHTML = notes.map((v) => `<button type="button" class="pill sm" data-cash="${v}">${v === t ? 'Valor exato' : brl(v)}</button>`).join('');
+    const rec = +$('#pdv-received').value || 0;
+    $('#pdv-change').innerHTML = rec ? (rec >= t ? `Troco: <b>${brl(rec - t)}</b>` : `<span class="neg">Faltam ${brl(t - rec)}</span>`) : '';
+  }
+}
+$('#pdv-pay').addEventListener('click', () => setTimeout(updateSaleButton, 0));
+$('#pdv-received').addEventListener('input', updateSaleButton);
+$('#cash-quick').addEventListener('click', (e) => { const b = e.target.closest('[data-cash]'); if (b) { $('#pdv-received').value = b.dataset.cash; updateSaleButton(); } });
+$('#sold-new').addEventListener('click', () => { $('#sold').hidden = true; $('#scan-code')?.focus(); });
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#sold').hidden) $('#sold').hidden = true; });
 $('#pdv-disc').addEventListener('input', renderCart);
 $('#cart').addEventListener('click', (e) => {
   const b = e.target.closest('[data-cq]'); if (!b) return;
@@ -338,7 +360,11 @@ $('#cart').addEventListener('click', (e) => {
   i.qty += d; if (i.qty < 1) cart.splice(+b.dataset.cq, 1); renderCart();
 });
 $('#pdv-go').addEventListener('click', async () => {
-  const btn = $('#pdv-go'); btn.disabled = true; $('#pdv-msg').textContent = 'Registrando…';
+  const btn = $('#pdv-go');
+  const pay = segVal('pdv-pay'), rec = +$('#pdv-received').value || 0;
+  if (pay === 'dinheiro' && rec && rec < saleTotal) { toast('O valor recebido é menor que o total.', true); $('#pdv-received').focus(); return; }
+  btn.disabled = true; $('#pdv-msg').textContent = 'Registrando…';
+  const soldList = cart.map((i) => `${i.qty}x ${i.name}${i.color || i.size ? ` (${[i.color, i.size].filter(Boolean).join(' · ')})` : ''}`);
   try {
     const o = await rpc('register_store_sale', {
       items: cart.map((i) => ({ id: i.id, qty: i.qty, color: i.color, size: i.size })),
@@ -351,6 +377,13 @@ $('#pdv-go').addEventListener('click', async () => {
     orderCache.set(String(o.id), { ...o, order_items: sold });
     $('#pdv-msg').innerHTML = `Venda #${o.number} · ${brl(+o.total)} · estoque atualizado.<span class="pdf-act"><button class="pill sm" type="button" data-pdf="${o.id}">PDF do pedido</button><a class="pill sm wa" data-pdf-wa="${o.id}" target="_blank" rel="noopener" aria-disabled="true">Preparando PDF…</a></span>`;
     prepSaleLink(o.id);
+    // confirmação grande: venda registrada, troco e estoque baixado
+    $('#sold-info').innerHTML = `Venda <b>#${o.number}</b> · ${PAY_LABEL[pay]} · <b>${brl(+o.total)}</b><br><small>${soldList.map(esc).join('<br>')}</small>`;
+    $('#sold-change').innerHTML = pay === 'dinheiro' && rec ? `Troco: <b>${brl(rec - +o.total)}</b>` : '';
+    $('#sold-stock').textContent = 'Estoque atualizado e venda lançada no caixa e no relatório do mês.';
+    $('#sold-acts').innerHTML = $('#pdv-msg .pdf-act')?.outerHTML || '';
+    $('#sold').hidden = false;
+    $('#pdv-received').value = '';
     cart = []; $('#pdv-name').value = ''; $('#pdv-phone').value = ''; $('#pdv-disc').value = 0;
     await reloadCatalog(); renderPdvGrid(); renderCart();
   } catch (err) { $('#pdv-msg').textContent = friendly(err); toast(friendly(err), true); await reloadCatalog(); renderPdvGrid(); }
