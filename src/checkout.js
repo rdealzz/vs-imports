@@ -12,8 +12,9 @@ import { initHeader } from './ui/header.js';
 import { freeBarHTML } from './lib/shipping.js';
 import { orderPdf, pdfName, downloadBlob, uploadPdf, waOrderLink } from './lib/orderPdf.js';
 
-// quando o Mercado Pago estiver integrado, troque para true
-const MP_ONLINE = false;
+// Mercado Pago: liga sozinho quando o token estiver salvo no servidor (pagamento-criar { check })
+let MP_ONLINE = false;
+const RETURN_ID = new URLSearchParams(location.search).get('pedido');
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -148,6 +149,13 @@ async function submit() {
     p_quote_id: del === 'entrega' ? quoteId : null, p_document: del === 'entrega' ? cpfDigits() : null,
   });
   if (error) { msg.textContent = friendly(error); go.disabled = false; catalog = await loadCatalog({ fresh: true }); refresh(); return; }
+  // pagamento online: vai para a tela segura do Mercado Pago (Pix ou cartão)
+  if (MP_ONLINE && pay() !== 'Na loja') {
+    msg.textContent = 'Abrindo o pagamento seguro do Mercado Pago…';
+    const { data: mp } = await supabase.functions.invoke('pagamento-criar', { body: { order_id: o.id, back: new URL('checkout.html', location.href).href } });
+    if (mp?.url) { bag.clear(); location.href = mp.url; return; }
+    // se o Mercado Pago falhar, o pedido continua reservado e segue pelo WhatsApp
+  }
   const a = del === 'entrega' ? addresses.find((x) => x.id === addrId) : null;
   const lines = items.map((i) => `• ${i.qty}x ${find(i.id)?.name} (${[i.color, i.size].filter(Boolean).join(', ')})`);
   const text = [`Olá, VS Imports! Fiz o pedido #${o.number} pelo site:`, ...lines,
@@ -180,7 +188,43 @@ async function submit() {
   scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// volta do Mercado Pago: checkout.html?pedido=<id>
+const MP_MSG = {
+  approved: ['Pagamento aprovado!', 'Recebemos seu pagamento. Já estamos separando suas peças.'],
+  pending: ['Aguardando o pagamento', 'Assim que o Mercado Pago confirmar (no Pix leva segundos), seu pedido muda para pago sozinho.'],
+  in_process: ['Pagamento em análise', 'O Mercado Pago está analisando o pagamento. Avisamos assim que for aprovado.'],
+  rejected: ['Pagamento não aprovado', 'Nada foi cobrado. Suas peças continuam reservadas: tente de novo com outro cartão ou pelo Pix.'],
+  cancelled: ['Pagamento cancelado', 'Nada foi cobrado. Suas peças continuam reservadas: você pode tentar de novo.'],
+};
+let polls = 0;
+async function showReturn() {
+  $('#co').hidden = true; step(4); document.body.classList.add('co-finished');
+  const done = $('#done'); done.hidden = false;
+  if (!auth.user) { done.innerHTML = '<h1>Entre na sua conta</h1><p>Entre para ver a situação do seu pedido.</p><button class="pill solid lg" type="button" data-co-login="entrar">Entrar</button>'; return; }
+  const { data: o } = await supabase.from('orders').select('id, number, total, status, mp_status, delivery').eq('id', RETURN_ID).maybeSingle();
+  if (!o) { done.innerHTML = '<h1>Pedido não encontrado</h1><p><a href="./">Voltar para a loja</a></p>'; return; }
+  const hint = new URLSearchParams(location.search).get('collection_status') || new URLSearchParams(location.search).get('status');
+  const key = o.status === 'pago' || o.status === 'separado' || o.status === 'entregue' ? 'approved'
+    : o.status === 'cancelado' ? 'expired' : o.mp_status || (hint === 'approved' ? 'pending' : hint) || 'pending';
+  const [t, d] = key === 'expired' ? ['Pedido expirado', 'A reserva de 48 horas acabou e as peças voltaram para a loja. Fale com a gente no WhatsApp.'] : MP_MSG[key] || MP_MSG.pending;
+  const retry = o.status === 'pendente' && ['rejected', 'cancelled', 'pending'].includes(key);
+  done.innerHTML = `<img src="${import.meta.env.BASE_URL}brand/vs-logo.svg" alt="" width="120" height="120">
+    <p class="eyebrow">Pedido #${o.number} · ${brl(+o.total)}</p><h1>${t}</h1><p>${d}</p>
+    <div class="done-act">${retry ? '<button class="pill solid lg" type="button" id="mp-retry">Pagar agora</button>' : ''}
+      <a class="pill lg" href="https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent(`Olá, VS Imports! Sobre o pedido #${o.number}.`)}" target="_blank" rel="noopener">Falar no WhatsApp</a></div>
+    <p class="small" id="mp-msg" role="status" aria-live="polite"></p>
+    <p class="small">Acompanhe em <b>Minha conta → Meus pedidos</b>${o.delivery === 'entrega' ? '; o código de rastreio aparece lá quando a etiqueta for gerada' : ''}.</p>`;
+  $('#mp-retry')?.addEventListener('click', async (e) => {
+    e.target.disabled = true; $('#mp-msg').textContent = 'Abrindo o Mercado Pago…';
+    const { data: mp } = await supabase.functions.invoke('pagamento-criar', { body: { order_id: o.id, back: new URL('checkout.html', location.href).href } });
+    if (mp?.url) location.href = mp.url; else { e.target.disabled = false; $('#mp-msg').textContent = 'Não foi possível abrir o pagamento agora. Fale com a gente no WhatsApp.'; }
+  });
+  // o aviso do Mercado Pago pode chegar alguns segundos depois: confere de novo por até 1 minuto
+  if (o.status === 'pendente' && polls++ < 15) setTimeout(showReturn, 4000);
+}
+
 async function onAuth() {
+  if (RETURN_ID) { showReturn(); return; }
   eligible = false;
   if (hasSupabase && auth.user) { const { data } = await supabase.rpc('first_purchase_eligible'); eligible = !!data; }
   renderConta(); await renderAddr(); refresh();
@@ -197,6 +241,7 @@ $('#go').addEventListener('click', submit);
 
 renderFooter(undefined, { home: './' });
 initHeader();
+if (hasSupabase) supabase.functions.invoke('pagamento-criar', { body: { check: true } }).then(({ data }) => { MP_ONLINE = !!data?.online; refresh(); }).catch(() => {});
 catalog = await loadCatalog();
 refresh();
 initAuth().then(() => auth.on(() => onAuth()));

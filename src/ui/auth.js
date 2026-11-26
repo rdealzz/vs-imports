@@ -145,15 +145,25 @@ async function submit(e) {
   finally { go.disabled = false; }
 }
 
+// código de rastreio: link direto quando for dos Correios (formato AA123456789BR)
+function trackHTML(code) {
+  const c = String(code).replace(/[^A-Za-z0-9]/g, '').slice(0, 40);
+  return /^[A-Z]{2}\d{9}[A-Z]{2}$/.test(c)
+    ? `<p class="trk">Rastreio: <a href="https://rastreamento.correios.com.br/app/index.php?objetos=${c}" target="_blank" rel="noopener"><b>${c}</b></a></p>`
+    : `<p class="trk">Rastreio: <b>${c}</b></p>`;
+}
+
 async function showOrders() {
   const m = document.getElementById('orders-modal'), ul = document.getElementById('my-orders');
   document.dispatchEvent(new CustomEvent('vs-cover', { detail: true })); m.hidden = false; ul.innerHTML = '<li class="muted">Carregando…</li>';
-  const { data, error } = await supabase.from('orders').select('number, created_at, status, total, discount, order_items(name, color, size, qty)').order('created_at', { ascending: false }).limit(30);
+  const { data, error } = await supabase.from('orders').select('id, number, created_at, status, total, discount, channel, tracking_code, order_items(name, color, size, qty)').order('created_at', { ascending: false }).limit(30);
   if (error) { ul.innerHTML = `<li class="muted">${friendly(error)}</li>`; return; }
   ul.innerHTML = data.length ? data.map((o) => `<li><div><b>Pedido #${o.number}</b><span class="st st-${o.status}">${o.status}</span></div>
     <small>${new Date(o.created_at).toLocaleString('pt-BR')}</small>
     <p>${o.order_items.map((i) => `${i.qty}x ${i.name}${i.color ? ' ' + i.color : ''}${i.size ? ' ' + i.size : ''}`).join(', ')}</p>
-    <b>${brl(+o.total)}</b>${+o.discount ? ` <small>(economizou ${brl(+o.discount)})</small>` : ''}</li>`).join('') : '<li class="muted">Você ainda não fez pedidos.</li>';
+    <b>${brl(+o.total)}</b>${+o.discount ? ` <small>(economizou ${brl(+o.discount)})</small>` : ''}
+    ${o.tracking_code ? trackHTML(o.tracking_code) : ''}
+    ${o.status === 'pendente' && o.channel === 'site' ? `<p><a class="pill sm solid" href="checkout.html?pedido=${o.id}">Pagar agora</a></p>` : ''}</li>`).join('') : '<li class="muted">Você ainda não fez pedidos.</li>';
 }
 
 function renderAccount() {

@@ -399,3 +399,6 @@ img.th { width: 44px; height: 44px; flex: none; object-fit: cover; border-radius
 .sf-status li::before { content: ""; position: absolute; left: 0; top: .5em; width: 9px; height: 9px; border-radius: 50%; background: #c9c4b8; }
 .sf-status li.ok::before { background: #1f7a4d; }
 .sf-status li.bad::before { background: #c0392b; }
+.mp-st { font-weight: 600; color: #8a6d1f; }
+.mp-st.mp-approved { color: #1f7a4d; }
+.mp-st.mp-rejected, .mp-st.mp-cancelled, .mp-st.mp-refunded, .mp-st.mp-charged_back { color: #c0392b; }

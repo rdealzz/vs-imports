@@ -436,7 +436,7 @@ async function ordersTotals() {
   $('#o-n-loja').textContent = sum((o) => o.channel !== 'site');
 }
 async function loadOrders() {
-  let q = supabase.from('orders').select('id, number, created_at, channel, payment, status, subtotal, discount, total, coupon_code, customer_name, customer_phone, delivery, notes, shipping_address, shipping, customer_document, shipping_service_name, shipping_days, superfrete_id, tracking_code, label_url, shipping_status, user_id, order_items(product_id, name, color, size, qty, unit_price)').order('created_at', { ascending: false }).limit(150);
+  let q = supabase.from('orders').select('id, number, created_at, channel, payment, status, subtotal, discount, total, coupon_code, customer_name, customer_phone, delivery, notes, shipping_address, shipping, customer_document, shipping_service_name, shipping_days, superfrete_id, tracking_code, label_url, shipping_status, mp_status, mp_payment_id, paid_at, user_id, order_items(product_id, name, color, size, qty, unit_price)').order('created_at', { ascending: false }).limit(150);
   if ($('#o-status').value) q = q.eq('status', $('#o-status').value);
   if (oSrc === 'site') q = q.eq('channel', 'site');
   else if (oSrc === 'loja') q = $('#o-channel').value ? q.eq('channel', $('#o-channel').value) : q.neq('channel', 'site');
@@ -451,12 +451,13 @@ async function loadOrders() {
     const name = o.customer_name || who?.full_name || who?.email || 'Cliente no balcão';
     const phone = o.customer_phone || who?.phone || '';
     return `<li class="order"><div class="o-top"><b>#${o.number}</b><span class="chip-s">${CH[o.channel]}</span><span class="st st-${o.status}">${o.status}</span><span class="o-date">${new Date(o.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span><b class="o-total">${brl(+o.total)}</b></div>
-      <div class="o-mid"><span>${esc(name)}${phone ? ` · <a href="https://wa.me/55${esc(phone.replace(/\D/g, '').replace(/^55/, ''))}" target="_blank" rel="noopener">${esc(phone)}</a>` : ''}</span><span>${o.payment ? PAY[o.payment] : 'pagamento a combinar'} · ${o.delivery === 'entrega' ? `entrega${+o.shipping ? ' (frete ' + brl(+o.shipping) + ')' : ' (frete grátis)'}` : 'retirada'}${+o.discount ? ` · desconto ${brl(+o.discount)}${o.coupon_code ? ' (' + o.coupon_code + ')' : ''}` : ''}</span></div>
+      <div class="o-mid"><span>${esc(name)}${phone ? ` · <a href="https://wa.me/55${esc(phone.replace(/\D/g, '').replace(/^55/, ''))}" target="_blank" rel="noopener">${esc(phone)}</a>` : ''}</span><span>${o.payment ? PAY[o.payment] : 'pagamento a combinar'}${o.mp_status ? ` · <b class="mp-st mp-${esc(o.mp_status)}">Mercado Pago: ${MP_ST[o.mp_status] || esc(o.mp_status)}</b>` : ''} · ${o.delivery === 'entrega' ? `entrega${+o.shipping ? ' (frete ' + brl(+o.shipping) + ')' : ' (frete grátis)'}` : 'retirada'}${+o.discount ? ` · desconto ${brl(+o.discount)}${o.coupon_code ? ' (' + o.coupon_code + ')' : ''}` : ''}</span></div>
       <ul class="o-items">${o.order_items.map((i) => `<li>${thumb(i.product_id)}<span><b>${i.qty}x</b> ${esc(i.name)}<small>${esc([i.color, i.size].filter(Boolean).join(' · '))}</small></span></li>`).join('')}</ul>
       ${shipHTML(o)}${o.notes ? `<p class="o-notes">${esc(o.notes)}</p>` : ''}
       ${o.status === 'cancelado' ? '' : `<div class="o-act"><select data-st="${o.id}">${['pendente', 'pago', 'separado', 'entregue'].map((s) => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}</select><button class="pill sm danger" data-cancel="${o.id}" data-n="${o.number}">Cancelar e devolver estoque</button></div>`}</li>`;
   }).join('') : '<li class="muted">Nenhum pedido.</li>';
 }
+const MP_ST = { approved: 'aprovado', pending: 'aguardando', in_process: 'em análise', rejected: 'recusado', cancelled: 'cancelado', refunded: 'estornado', charged_back: 'contestado' };
 // endereço de entrega do pedido (foto do momento da compra) + copiar para etiqueta
 const addrText = (a) => [a.recipient, `${a.street}, ${a.number}${a.complement ? ' - ' + a.complement : ''}`, `${a.district} - ${a.city}/${a.state}`, `CEP ${String(a.cep).replace(/^(\d{5})(\d{3})$/, '$1-$2')}`, a.reference ? 'Ref.: ' + a.reference : ''].filter(Boolean).join('\n');
 function shipHTML(o) {
