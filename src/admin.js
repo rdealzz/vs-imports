@@ -802,10 +802,37 @@ $('#sender-form').addEventListener('submit', async (e) => {
   s.postal_code = s.postal_code.replace(/\D/g, ''); s.state_abbr = s.state_abbr.toUpperCase().slice(0, 2);
   if (s.postal_code.length !== 8 || !s.address || !s.district || !s.city) { toast('Preencha CEP, rua, bairro e cidade.', true); return; }
   const { error } = await supabase.from('store_settings').update({ sender: s, updated_at: new Date().toISOString() }).eq('id', true);
-  toast(error ? friendly(error) : 'Remetente salvo', !!error);
+  toast(error ? friendly(error) : 'Remetente salvo', !!error); loadSfStatus();
+});
+// situação da conta SuperFrete (saldo, rastreio automático, remetente)
+async function loadSfStatus() {
+  const ul = $('#sf-status'); if (!ul) return;
+  const { data, error } = await supabase.functions.invoke('frete-etiqueta', { body: { acao: 'conta' } });
+  const { data: st } = await supabase.from('store_settings').select('sender').maybeSingle();
+  const senderOk = !!(st?.sender?.postal_code && st?.sender?.address);
+  if (error || !data?.ok) { ul.innerHTML = '<li class="bad">SuperFrete não conectada (confira o token no servidor).</li>'; return; }
+  const low = data.saldo < 30;
+  ul.innerHTML = `<li class="ok">Conta SuperFrete conectada (${data.ambiente === 'teste' ? 'modo teste' : 'produção'}) · frete real no checkout</li>
+    <li class="${low ? 'bad' : 'ok'}">Saldo da carteira: <b>${brl(data.saldo)}</b>${low ? ' · recarregue com Pix na SuperFrete antes de gerar etiquetas' : ''}</li>
+    <li class="${data.rastreio_automatico ? 'ok' : 'bad'}">Rastreio automático ${data.rastreio_automatico ? 'ligado' : `desligado <button class="pill sm" type="button" id="sf-hook">Ligar</button>`}</li>
+    <li class="${senderOk ? 'ok' : 'bad'}">Remetente ${senderOk ? 'preenchido · etiquetas liberadas' : 'pendente · preencha abaixo para liberar as etiquetas'}</li>`;
+  $('#sf-hook')?.addEventListener('click', async () => {
+    const { error: e } = await supabase.functions.invoke('frete-etiqueta', { body: { acao: 'webhook' } });
+    toast(e ? 'Não foi possível ligar o rastreio' : 'Rastreio automático ligado', !!e); loadSfStatus();
+  });
+}
+// CEP do remetente preenche rua, bairro e cidade
+$('#sender-form').postal_code.addEventListener('input', async (e) => {
+  const c = e.target.value.replace(/\D/g, ''); if (c.length !== 8) return;
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${c}/json/`).then((x) => x.json()); if (r.erro) { toast('CEP não encontrado', true); return; }
+    const f = $('#sender-form');
+    if (r.logradouro) f.address.value = r.logradouro; if (r.bairro) f.district.value = r.bairro;
+    f.city.value = r.localidade || f.city.value; f.state_abbr.value = r.uf || f.state_abbr.value; f.number.focus();
+  } catch {}
 });
 async function loadSettings() {
-  loadShipping(); loadReels(); loadSender();
+  loadShipping(); loadReels(); loadSender(); loadSfStatus();
   const { data } = await supabase.from('store_settings').select('month_start_day, monthly_goal').maybeSingle();
   $('#set-form').day.value = data?.month_start_day || 1; $('#set-form').goal.value = data?.monthly_goal ?? ''; previewPeriod();
   loadTeam();

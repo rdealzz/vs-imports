@@ -34,6 +34,21 @@ Deno.serve(async (req) => {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
     const { order_id, acao = 'gerar', motivo } = await req.json();
+    // situação da conta SuperFrete: saldo, envios disponíveis e se o rastreio automático está ligado
+    const HOOK_URL = `${Deno.env.get('SUPABASE_URL')}/functions/v1/frete-webhook`;
+    const EVENTS = ['order.created', 'order.released', 'order.generated', 'order.posted', 'order.delivered', 'order.cancelled'];
+    const hooks = async () => { const h = await sf('/api/v0/webhook', undefined, 'GET'); return (Array.isArray(h) ? h : h?.data || []) as { url: string; is_active?: boolean }[]; };
+    if (acao === 'conta') {
+      const u = await sf('/api/v0/user', undefined, 'GET');
+      const mine = (await hooks()).find((h) => h.url === HOOK_URL);
+      return json({ ok: true, ambiente: SF_URL.includes('sandbox') ? 'teste' : 'producao', nome: cut(u.firstname, 40), saldo: Number(u.balance ?? 0),
+        envios_disponiveis: u.limits?.shipments_available ?? null, rastreio_automatico: !!(mine && mine.is_active !== false) });
+    }
+    if (acao === 'webhook') {
+      if ((await hooks()).some((h) => h.url === HOOK_URL && h.is_active !== false)) return json({ ok: true, ja_estava: true });
+      const out = await sf('/api/v0/webhook', { name: 'Site VS Imports', url: HOOK_URL, events: EVENTS });
+      return json({ ok: true, id: out?.id ?? null });
+    }
     const { data: o, error } = await admin.from('orders').select('*, order_items(name, qty, unit_price, product_id)').eq('id', order_id).maybeSingle();
     if (error || !o) return json({ error: 'pedido_nao_encontrado' }, 404);
 

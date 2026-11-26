@@ -78,13 +78,10 @@ Já estão liberados `api.superfrete.com` e `sandbox.superfrete.com`. Para criar
   abre o PDF), depois **Imprimir etiqueta de envio**, **Atualizar rastreio** e **Cancelar etiqueta**.
 - **Painel → Ajustes → Remetente das etiquetas:** endereço de onde as peças saem (obrigatório para gerar etiqueta).
 
-## Para ligar (falta só isto)
+## Situação atual (26/11/2026)
 
-1. No Supabase: **Edge Functions → Secrets**, adicionar:
-   - `SUPERFRETE_TOKEN` = token da SuperFrete (primeiro o do Sandbox; depois o de Produção)
-   - `SUPERFRETE_URL` = `https://sandbox.superfrete.com` para testes, `https://api.superfrete.com` em produção
-   - `SUPERFRETE_UA` = `VS Imports 1.0 (e-mail de contato da loja)`
-2. Preencher o remetente em **Painel → Ajustes**.
-3. Cadastrar o webhook na SuperFrete apontando para
-   `https://lmwosmsnpsguqymbuanv.supabase.co/functions/v1/frete-webhook`
-   (eventos `order.generated`, `order.posted`, `order.delivered`, `order.cancelled`).
+- Token de **produção** salvo no Supabase: o checkout já mostra o frete real (PAC e SEDEX).
+- **Rastreio automático ligado**: webhook do site cadastrado pela API (a integração da Nuvemshop continua cadastrada à parte).
+- Painel → Ajustes mostra a situação da conta: conexão, saldo da carteira, rastreio e remetente.
+- **Falta:** preencher o remetente (Painel → Ajustes; o CEP preenche rua, bairro e cidade) e recarregar a carteira com Pix
+  antes de gerar etiquetas pelo painel.

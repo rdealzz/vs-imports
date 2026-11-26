@@ -392,3 +392,10 @@ img.th { width: 44px; height: 44px; flex: none; object-fit: cover; border-radius
 .sold-change { font-size: 18px; } .sold-change b { font-size: 26px; color: #1E6B47; }
 .sold-acts .pdf-act { justify-content: center; margin: 12px 0; }
 .sold-card > .pill { margin-top: 8px; width: 100%; }
+
+/* situação da SuperFrete em Ajustes */
+.sf-status { list-style: none; margin: 4px 0 14px; padding: 12px 14px; display: grid; gap: 8px; border: 1px solid var(--line); border-radius: 14px; background: #faf9f6; font-size: 14px; }
+.sf-status li { position: relative; padding-left: 18px; line-height: 1.45; }
+.sf-status li::before { content: ""; position: absolute; left: 0; top: .5em; width: 9px; height: 9px; border-radius: 50%; background: #c9c4b8; }
+.sf-status li.ok::before { background: #1f7a4d; }
+.sf-status li.bad::before { background: #c0392b; }
